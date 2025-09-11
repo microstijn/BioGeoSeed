@@ -7,12 +7,14 @@ include("Micronutrients.jl")
 include("OrganicMatter.jl")
 include("Assembler.jl")
 include("SeawaterChemistry.jl")
+include("PhysicalModels.jl")
 
 include("TestProvinces.jl")
 include("TestMacronutrients.jl")
 include("TestMicronutrients.jl")
 include("TestOrganicMatter.jl")
 include("TestSeawaterChemistry.jl")
+include("TestPhysicalModels.jl")
 
 # Expose the public functions from each module
 using .Provinces
@@ -29,6 +31,9 @@ export get_organic_matter
 
 using .SeawaterChemistry
 export get_seawater_chemistry
+
+using .PhysicalModels
+export calculate_oxygen
 
 # Expose the main assembler function
 using .Assembler
@@ -49,6 +54,9 @@ export run_organic_matter_tests
 
 using .TestSeawaterChemistry
 export run_seawater_chemistry_tests
+
+using .TestPhysicalModels
+export run_physical_models_tests
 
 
 end # module BioGeoSeed
