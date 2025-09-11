@@ -38,13 +38,11 @@ const OXYGEN_PARAMS = Dict(
 """
     calculate_oxygen(biome::String, depth::Real) -> Union{Float64, Nothing}
 
-    Calculates the dissolved oxygen concentration at a given depth, modeling a
-    three-layer structure: a saturated surface, an Oxygen Minimum Zone (OMZ),
-    and stable deep water.
-
-    # Returns
-    - The dissolved oxygen concentration in μmol/kg.
-    - Returns `nothing` if the biome name is invalid.
+    Calculates the dissolved oxygen concentration at a given depth.
+    
+    CORRECTED: This function now uses a more robust model of a Gaussian dip
+    subtracted from a linear baseline, ensuring the profile is continuous
+    and accurately represents the OMZ feature.
 """
 function calculate_oxygen(biome::String, depth::Real)
     if !haskey(OXYGEN_PARAMS, biome)
@@ -55,26 +53,30 @@ function calculate_oxygen(biome::String, depth::Real)
     params = OXYGEN_PARAMS[biome]
     z = max(0.0, depth)
 
-    # This model uses a double-sigmoid (logistic) function to create the characteristic
-    # OMZ profile. One sigmoid decreases O2 from the surface to the OMZ core,
-    # and the second increases it from the OMZ core to the deep-water value.
-
-    # Part 1: Decrease from surface to OMZ minimum
-    k1 = 4.0 / params.omz_width # Steepness factor
-    omz_dip = params.O2_surf_sat - params.omz_intensity
-    surface_to_omz = params.O2_surf_sat - omz_dip / (1.0 + exp(-k1 * (z - params.z_omz)))
-
-    # Part 2: Increase from OMZ minimum to deep value
-    k2 = 4.0 / params.omz_width # Steepness factor
-    deep_rise = params.O2_deep - params.omz_intensity
-    omz_to_deep = params.omz_intensity + deep_rise / (1.0 + exp(-k2 * (z - params.z_omz)))
+    # 1. Establish a simple linear baseline from the surface to the deep value.
+    # We define a transition depth to prevent the linear trend from continuing indefinitely.
+    transition_depth = params.z_omz * 2.0
     
-    # The final concentration is determined by which part of the curve is dominant.
-    # Below the OMZ core, the rise to the deep value is dominant.
-    # Above the OMZ core, the fall from the surface is dominant.
-    concentration = z > params.z_omz ? omz_to_deep : surface_to_omz
+    baseline = if z >= transition_depth
+        params.O2_deep
+    else
+        # Linear interpolation between surface and deep values
+        params.O2_surf_sat - (params.O2_surf_sat - params.O2_deep) * (z / transition_depth)
+    end
+
+    # 2. Calculate the magnitude of the required dip at the OMZ core.
+    baseline_at_omz = params.O2_surf_sat - (params.O2_surf_sat - params.O2_deep) * (params.z_omz / transition_depth)
+    dip_magnitude = baseline_at_omz - params.omz_intensity
+
+    # 3. Define a Gaussian dip centered at the OMZ depth.
+    exponent = -((z - params.z_omz)^2) / (2 * params.omz_width^2)
+    dip = dip_magnitude * exp(exponent)
+    
+    # 4. Subtract the dip from the baseline to get the final concentration.
+    concentration = baseline - dip
     
     return max(0.0, concentration)
 end
 
 end # module PhysicalModels
+
