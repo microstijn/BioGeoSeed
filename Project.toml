@@ -1,0 +1,10 @@
+name = "BioGeoSeed"
+uuid = "02c95e1c-fcca-4f2d-b126-0ab4b5d2ec40"
+authors = ["Stijn Peeters <58211004+microstijn@users.noreply.github.com>"]
+version = "0.1.0"
+
+[deps]
+GeoInterface = "cf35fbd7-0cd7-5166-be24-54bfbe79505f"
+Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
+Shapefile = "8e980c4a-a4fe-5da2-b3a7-4b4b0353a2f4"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
