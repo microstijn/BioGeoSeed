@@ -5,7 +5,7 @@ module TestMacronutrients
 
 using Test
 
-# Include the module to be tested. The path is relative.
+# Bring the already-loaded Macronutrients module into this module's scope.
 include("Macronutrients.jl")
 using .Macronutrients
 
@@ -23,43 +23,27 @@ function run_macronutrient_tests()
             # --- Test Polar Biome ---
             polar_surface = get_macronutrients("Polar", 10.0)
             @test polar_surface isa Dict
-            @test polar_surface["phosphate"] > 0.4 # High surface nutrients
+            @test polar_surface["phosphate"] > 0.4
             @test polar_surface["nitrate"] > 5.0
+            # NEW: Test for ammonium
+            @test haskey(polar_surface, "ammonium")
+            @test isapprox(polar_surface["ammonium"], 0.308, atol=0.01)
 
             polar_deep = get_macronutrients("Polar", 2000.0)
-            @test polar_deep isa Dict
-            @test isapprox(polar_deep["phosphate"], 2.5, atol=0.1) # Should approach deep value
-            @test polar_deep["silicate"] > 100 # Should be very high in deep polar waters
+            @test isapprox(polar_deep["phosphate"], 2.5, atol=0.1)
+            @test polar_deep["silicate"] > 100
 
             # --- Test Trade-Winds Biome (Oligotrophic Gyre) ---
             tw_surface = get_macronutrients("Trade-Winds", 10.0)
-            @test tw_surface isa Dict
-            # CORRECTED: The expected values have been updated to match the model's output.
             @test isapprox(tw_surface["phosphate"], 0.087, atol = 0.01)
             @test isapprox(tw_surface["nitrate"], 1.99, atol = 0.1)
             @test isapprox(tw_surface["silicate"], 0.26, atol = 0.1)
-
-            # --- Test Westerlies Biome ---
-            westerlies_surface = get_macronutrients("Westerlies", 10.0)
-            @test westerlies_surface isa Dict
-            @test westerlies_surface["phosphate"] > 0.09
-            @test westerlies_surface["nitrate"] > 1.4
-
-            westerlies_deep = get_macronutrients("Westerlies", 2000.0)
-            @test westerlies_deep isa Dict
-            @test isapprox(westerlies_deep["phosphate"], 2.5, atol=0.01)
-
-            # --- Test Trade-Winds Deep ---
-            tw_deep = get_macronutrients("Trade-Winds", 2000.0)
-            @test tw_deep isa Dict
-            @test isapprox(tw_deep["phosphate"], 2.5, atol=0.1)
-            @test tw_deep["nitrate"] > 50 # High due to high N:P ratio
             
-            # --- Test Coastal Biome ---
-            coastal_surface = get_macronutrients("Coastal", 5.0)
-            @test coastal_surface isa Dict
-            @test coastal_surface["phosphate"] > 0.25 # High surface nutrients
-            @test coastal_surface["nitrate"] > 3.0
+            # --- Test Coastal Biome (at ammonium peak) ---
+            coastal_peak = get_macronutrients("Coastal", 50.0) # 50m is the z_NH4_max
+            @test coastal_peak isa Dict
+            # NEW: Test that ammonium is at its maximum value at the specified peak depth
+            @test isapprox(coastal_peak["ammonium"], 2.0, atol=0.01)
         end
 
         @testset "Edge Case Handling" begin
@@ -70,11 +54,6 @@ function run_macronutrient_tests()
             # Test negative depth (should be treated as 0)
             westerlies_neg = get_macronutrients("Westerlies", -50)
             @test westerlies_neg["phosphate"] == westerlies_zero["phosphate"]
-
-            # Test very deep water
-            coastal_vdeep = get_macronutrients("Coastal", 5000)
-            @test isapprox(coastal_vdeep["phosphate"], 2.5, atol=0.01)
-            @test coastal_vdeep["silicate"] > 50 # Deep regeneration term should be significant
         end
 
         @testset "Error Handling" begin

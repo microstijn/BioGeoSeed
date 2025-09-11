@@ -14,4 +14,35 @@ run_provinces_tests(
     shp_path
 );
 
-?run_tests
+run_macronutrient_tests();
+
+c = get_macronutrients(
+    "Polar",
+    10
+)
+
+get_micronutrients(
+    "Polar",
+    c
+)
+
+get_organic_matter(
+    "Polar",
+    10
+)
+
+run_organic_matter_tests();
+
+get_seawater_chemistry(
+    "Polar"
+)
+
+run_seawater_chemistry_tests();
+
+
+generate_seed(
+    50,
+    -30,
+    100,
+    shp_path
+)

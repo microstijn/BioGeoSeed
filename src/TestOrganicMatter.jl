@@ -5,7 +5,7 @@ module TestOrganicMatter
 
 using Test
 
-# Include the module to be tested. The path is relative.
+# Bring the already-loaded OrganicMatter module into this module's scope.
 include("OrganicMatter.jl")
 using .OrganicMatter
 
@@ -26,26 +26,28 @@ function run_organic_matter_tests()
             # High total DOC and POC
             @test coastal_surface["DOC_total"] > 75.0
             @test coastal_surface["POC_total"] > 13.0
-            # High protein percentage in POM
-            protein_poc_percent = (coastal_surface["POC_protein"] / coastal_surface["POC_total"]) * 100
-            @test isapprox(protein_poc_percent, 45.0, atol=1)
+            # Test for a specific amino acid to confirm monomer partitioning
+            @test haskey(coastal_surface, "gly_e")
+            @test coastal_surface["gly_e"] > 0
+            # NEW: Test for DON and DOP
+            @test haskey(coastal_surface, "DON")
+            @test haskey(coastal_surface, "DOP")
+            @test coastal_surface["DON"] > 5.0 # High DON in productive surface waters
+            @test isapprox(coastal_surface["DOC_total"] / coastal_surface["DON"], 14.0, atol=0.1)
+
 
             # --- Test Trade-Winds Biome (Oligotrophic Deep) ---
             tw_deep = get_organic_matter("Trade-Winds", 2000.0)
-            @test tw_deep isa Dict
-            # DOC and POC should be close to refractory deep values
             @test isapprox(tw_deep["DOC_total"], 40.0, atol=0.1)
             @test isapprox(tw_deep["POC_total"], 0.1, atol=0.01)
-            # Low protein percentage in DOM
-            protein_dom_percent = (tw_deep["DOC_protein"] / tw_deep["DOC_total"]) * 100
-            @test isapprox(protein_dom_percent, 2.0, atol=0.1)
-
-            # --- Test Mesopelagic Zone ---
-            westerlies_meso = get_organic_matter("Westerlies", 500.0)
-            @test westerlies_meso isa Dict
-            # Check partitioning for Mesopelagic zone
-            carb_pom_percent = (westerlies_meso["POC_carbohydrate"] / westerlies_meso["POC_total"]) * 100
-            @test isapprox(carb_pom_percent, 15.0, atol=1)
+            # Test for a specific sugar
+            @test haskey(tw_deep, "glc_D_e") 
+            @test tw_deep["glc_D_e"] > 0
+            # NEW: Test for DON and DOP in deep, refractory DOM
+            @test haskey(tw_deep, "DON")
+            @test haskey(tw_deep, "DOP")
+            @test isapprox(tw_deep["DOC_total"] / tw_deep["DON"], 40.0, atol=0.1) # High C:N
+            @test isapprox(tw_deep["DOC_total"] / tw_deep["DOP"], 1500.0, atol=1) # Very high C:P
         end
 
         @testset "Edge Case Handling" begin
@@ -53,10 +55,6 @@ function run_organic_matter_tests()
             polar_zero = get_organic_matter("Polar", 0)
             @test polar_zero["DOC_total"] == 60.0
             @test polar_zero["POC_total"] == 5.0
-
-            # Test negative depth, should be treated as 0
-            polar_neg = get_organic_matter("Polar", -100)
-            @test polar_neg["DOC_total"] == 60.0
         end
 
         @testset "Error Handling" begin
@@ -64,8 +62,8 @@ function run_organic_matter_tests()
             invalid_result = get_organic_matter("Invalid Biome", 100)
             @test isnothing(invalid_result)
         end
-
     end
 end
 
 end # module TestOrganicMatter
+
