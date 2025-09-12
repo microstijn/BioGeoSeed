@@ -5,23 +5,22 @@
 module BiogeochemistryModels
 
 using ..Macronutrients
+using ..PhysicalModels 
 
 export get_redox_sensitive_species
 
 #= --- Data Structures and Parameters --- =#
 
-# NEW: A struct to hold biome-specific parameters for the enhanced nitrite model.
 struct NitriteModelParameters
-    z_snm_offset::Float64 # Vertical offset of the SNM from the OMZ core (m)
-    snm_width::Float64    # Vertical spread/width of the nitrite peak (m)
-    nitrite_yield::Float64# The peak fraction of potential nitrate converted to nitrite
+    z_snm_offset::Float64 
+    snm_width::Float64    
+    nitrite_yield::Float64
 end
 
-# A dictionary mapping biomes to their specific nitrite model parameters.
 const NITRITE_PARAMS = Dict(
-    "Polar" => NitriteModelParameters(50.0, 100.0, 0.05), # Weak, broad SNM
+    "Polar" => NitriteModelParameters(50.0, 100.0, 0.05),
     "Westerlies" => NitriteModelParameters(75.0, 150.0, 0.15),
-    "Trade-Winds" => NitriteModelParameters(100.0, 200.0, 0.30), # Pronounced, deep SNM
+    "Trade-Winds" => NitriteModelParameters(100.0, 200.0, 0.30),
     "Coastal" => NitriteModelParameters(50.0, 100.0, 0.25)
 )
 
@@ -44,32 +43,35 @@ end
 
     REFACTORED: Implements a dual-Gaussian model for nitrate and nitrite.
 """
-function _calculate_nitrate_nitrite(potential_nitrate::Float64, o2_conc::Float64, biome::String, depth::Float64)
-    # Get parameters for the OMZ (from PhysicalModels) and SNM
+function _calculate_nitrate_nitrite(potential_nitrate::Float64, o2_conc::Float64, biome::String, depth::Real)
     omz_params = PhysicalModels.OXYGEN_PARAMS[biome]
     snm_params = NITRITE_PARAMS[biome]
     z = depth
 
-    # 1. Model Nitrate Consumption: A Gaussian dip centered on the OMZ core.
-    # The dip is strongest when oxygen is lowest.
-    nitrate_consumption_factor = (OXIC_THRESHOLD - min(o2_conc, OXIC_THRESHOLD)) / OXIC_THRESHOLD
+    # 1. Model Nitrate Consumption
+    nitrate_consumption_factor = if o2_conc >= OXIC_THRESHOLD
+        0.0
+    elseif o2_conc <= SUBOXIC_THRESHOLD
+        0.99 
+    else 
+        0.99 * (1.0 - (o2_conc - SUBOXIC_THRESHOLD) / (OXIC_THRESHOLD - SUBOXIC_THRESHOLD))
+    end
+    
     nitrate_dip_exponent = -((z - omz_params.z_omz)^2) / (2 * omz_params.omz_width^2)
     nitrate_dip = nitrate_consumption_factor * exp(nitrate_dip_exponent)
     
     nitrate = potential_nitrate * (1.0 - nitrate_dip)
 
-    # 2. Model Nitrite Peak (SNM): A separate Gaussian peak, offset from the OMZ.
-    z_snm = omz_params.z_omz + snm_params.z_snm_offset # Offset depth for the nitrite peak
+    # 2. Model Nitrite Peak (SNM)
+    z_snm = omz_params.z_omz + snm_params.z_snm_offset 
     nitrite_peak_exponent = -((z - z_snm)^2) / (2 * snm_params.snm_width^2)
     
-    # Nitrite only forms in a narrow window of suboxic conditions.
     nitrite_production_factor = if SUBOXIC_THRESHOLD < o2_conc <= OXIC_THRESHOLD
         1.0 - (o2_conc - SUBOXIC_THRESHOLD) / (OXIC_THRESHOLD - SUBOXIC_THRESHOLD)
     else
         0.0
     end
     
-    # Calculate nitrite based on the potential nitrate, yield, and production factor.
     max_possible_nitrite = potential_nitrate * snm_params.nitrite_yield
     nitrite = max_possible_nitrite * nitrite_production_factor * exp(nitrite_peak_exponent)
     
@@ -96,19 +98,17 @@ function _calculate_sulfur_species(redox_state::String)
 end
 
 #= --- Public Interface --- =#
-function get_redox_sensitive_species(biome::String, o2_conc::Float64, phosphate::Float64, depth::Float64)
+# CORRECTED: The type annotation for `depth` is changed from ::Float64 to ::Real
+function get_redox_sensitive_species(biome::String, o2_conc::Float64, phosphate::Float64, depth::Real)
     if !haskey(Macronutrients.BIOME_PARAMS, biome); @error "Invalid biome: $biome"; return nothing; end
     
     redox_state = determine_redox_state(o2_conc)
     
-    # We need to reach into PhysicalModels to get OMZ parameters for the new nitrite model
-    # This indicates a potential need for a future refactor to pass parameters more cleanly
     if !haskey(PhysicalModels.OXYGEN_PARAMS, biome); @error "Missing OMZ params for biome: $biome"; return nothing; end
 
     params = Macronutrients.BIOME_PARAMS[biome]
     potential_nitrate = params.RN_P * phosphate
 
-    # Use the new, more sophisticated nitrate/nitrite model
     nitrate, nitrite = _calculate_nitrate_nitrite(potential_nitrate, o2_conc, biome, depth)
     
     iron, manganese = _calculate_redox_metals(redox_state)

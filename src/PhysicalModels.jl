@@ -5,7 +5,7 @@
 
 module PhysicalModels
 
-export calculate_oxygen
+export calculate_oxygen, OXYGEN_PARAMS 
 
 #= --- Data Structures and Parameters --- =#
 
