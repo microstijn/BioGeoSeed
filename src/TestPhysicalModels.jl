@@ -1,12 +1,12 @@
 # TestPhysicalModels.jl
 # This module contains a suite of tests for the PhysicalModels.jl module.
-
+# REVISED: Tests have been updated to match the corrected calculate_oxygen function
+# and the new, scientifically robust biome parameters.
 module TestPhysicalModels
 
 using Test
 
 # Bring the already-loaded PhysicalModels module into this module's scope.
-
 using ..PhysicalModels
 
 export run_physical_models_tests
@@ -21,6 +21,7 @@ function run_physical_models_tests()
 
         @testset "Oxygen Profile Calculations" begin
             # --- Test Polar Biome (Weak OMZ) ---
+            # Using the NEW parameters: z_omz=1000m, omz_intensity=180.0
             polar_surf = calculate_oxygen("Polar", 0.0)
             @test isapprox(polar_surf, 340.0, atol=0.1) # Should exactly match surface saturation
 
@@ -30,12 +31,13 @@ function run_physical_models_tests()
             polar_deep = calculate_oxygen("Polar", 4000.0)
             @test isapprox(polar_deep, 210.0, atol=0.1) # Should match deep value
 
-            # --- Test Trade-Winds Biome (Intense OMZ) ---
+            # --- Test Trade-Winds Biome (Deep, weak OMZ) ---
+            # Using the NEW parameters: z_omz=1200m, omz_intensity=90.0
             tw_surf = calculate_oxygen("Trade-Winds", 0.0)
             @test isapprox(tw_surf, 220.0, atol=0.1) # Should exactly match surface saturation
 
-            tw_omz = calculate_oxygen("Trade-Winds", 500.0) # Depth of OMZ core
-            @test isapprox(tw_omz, 5.0, atol=0.1) # Should exactly match low OMZ intensity
+            tw_omz = calculate_oxygen("Trade-Winds", 1200.0) # NEW Depth of OMZ core
+            @test isapprox(tw_omz, 90.0, atol=0.1) # NEW low OMZ intensity
 
             tw_deep = calculate_oxygen("Trade-Winds", 4000.0)
             @test isapprox(tw_deep, 180.0, atol=0.1)
@@ -51,4 +53,3 @@ function run_physical_models_tests()
 end
 
 end # module TestPhysicalModels
-

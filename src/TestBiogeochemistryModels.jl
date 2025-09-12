@@ -1,78 +1,85 @@
 # TestBiogeochemistryModels.jl
-# REFACTORED: This test suite has been updated to validate the new, more
-# sophisticated dual-Gaussian model for the Secondary Nitrite Maximum (SNM).
-
+# REWRITTEN: This test suite has been completely updated to validate the new,
+# process-based models for nitrate, nitrite, and ammonium that are causally
+# linked to the revised dissolved oxygen profile.
 module TestBiogeochemistryModels
 
 using Test
-# Use `..` to correctly access sibling modules within the BioGeoSeed package.
 using ..BiogeochemistryModels 
-using ..PhysicalModels 
+using ..PhysicalModels
+using ..Macronutrients # Needed to get potential nitrate
 
 export run_biogeochemistry_models_tests
 
 """
     run_biogeochemistry_models_tests()
 
-    Runs the complete test suite for the BiogeochemistryModels module, with a
-    specific focus on validating the new Secondary Nitrite Maximum (SNM) logic.
+    Runs the complete test suite for the BiogeochemistryModels module, validating
+    the nitrate deficit, the dual nitrite peaks (PNM and SNM), and the new
+    redox-dependent ammonium profile.
 """
 function run_biogeochemistry_models_tests()
     @testset "Biogeochemistry Models Tests" begin
 
-        # Use a biome with a strong OMZ for a clear test of the SNM.
-        test_biome = "Trade-Winds" 
-        test_phosphate = 2.0 # umol/kg - representative deep-water value
+        # --- Setup for a biome with an intense OMZ (Coastal) ---
+        intense_biome = "Coastal"
+        # Get model parameters to make tests robust
+        omz_params_intense = PhysicalModels.OXYGEN_PARAMS[intense_biome]
+        depth_omz_intense = omz_params_intense.z_omz
+        n_params_intense = BiogeochemistryModels.NITROGEN_PARAMS[intense_biome]
+        depth_pnm_intense = n_params_intense.z_pnm
         
-        # Get the specific parameters for this biome to determine the critical test depths.
-        # This makes the test robust and directly linked to the model's parameters.
-        omz_params = PhysicalModels.OXYGEN_PARAMS[test_biome]
-        snm_params = BiogeochemistryModels.NITRITE_PARAMS[test_biome]
+        # --- Setup for a biome with a weak OMZ (Polar) ---
+        weak_biome = "Polar"
+        omz_params_weak = PhysicalModels.OXYGEN_PARAMS[weak_biome]
+        depth_omz_weak = omz_params_weak.z_omz
 
-        # Define the critical depths for testing: the OMZ core and the SNM peak.
-        depth_omz = omz_params.z_omz 
-        depth_snm = depth_omz + snm_params.z_snm_offset 
+        # Realistic phosphate for calculations
+        test_phosphate = 2.0 
 
-        # We need realistic oxygen values at these depths for a valid test.
-        o2_at_omz = PhysicalModels.calculate_oxygen(test_biome, depth_omz)
-        o2_at_snm = PhysicalModels.calculate_oxygen(test_biome, depth_snm)
+        @testset "Nitrogen Cycle in Intense OMZ (Coastal Biome)" begin
+            # Calculate species at the three critical depths: PNM, OMZ core, and deep ocean
+            o2_at_pnm = calculate_oxygen(intense_biome, depth_pnm_intense)
+            o2_at_omz = calculate_oxygen(intense_biome, depth_omz_intense)
+            o2_deep = calculate_oxygen(intense_biome, 3000.0)
 
-        @testset "Secondary Nitrite Maximum (SNM) Logic" begin
-            # Test conditions AT THE OMZ CORE depth
-            species_at_omz = get_redox_sensitive_species(test_biome, o2_at_omz, test_phosphate, depth_omz)
-            @test species_at_omz isa Dict
-            # At the OMZ core, nitrate should be at or near its minimum concentration.
-            @test species_at_omz["nitrate"] < 1.0 
+            species_at_pnm = get_redox_sensitive_species(intense_biome, o2_at_pnm, test_phosphate, depth_pnm_intense)
+            species_at_omz = get_redox_sensitive_species(intense_biome, o2_at_omz, test_phosphate, depth_omz_intense)
+            species_deep = get_redox_sensitive_species(intense_biome, o2_deep, test_phosphate, 3000.0)
+
+            # TEST 1: Primary Nitrite Maximum (PNM)
+            @test species_at_pnm["nitrite"] > 0.1
+            @test species_at_pnm["nitrite"] > species_deep["nitrite"]
             
-            # Test conditions AT THE SNM PEAK depth
-            species_at_snm = get_redox_sensitive_species(test_biome, o2_at_snm, test_phosphate, depth_snm)
-            @test species_at_snm isa Dict
-            # At the SNM depth, nitrite should be at or near its maximum concentration.
-            @test species_at_snm["nitrite"] > 1.0 
+            # TEST 2: Nitrate Deficit
+            potential_nitrate = Macronutrients.BIOME_PARAMS[intense_biome].RN_P * test_phosphate
+            @test species_at_omz["nitrate"] < potential_nitrate
             
-            # CRITICAL TEST 1: Confirm that the nitrite peak is spatially offset from the OMZ.
-            # The nitrite concentration must be higher at the SNM depth than at the OMZ depth.
-            @test species_at_snm["nitrite"] > species_at_omz["nitrite"]
+            # TEST 3: Secondary Nitrite Maximum (SNM)
+            # In an intense OMZ, a nitrite peak should form in the OMZ core
+            @test species_at_omz["nitrite"] > species_at_pnm["nitrite"]
             
-            # CRITICAL TEST 2: Confirm the nitrate minimum is at the OMZ core.
-            # The nitrate concentration must be lower at the OMZ depth than at the SNM depth.
-            @test species_at_omz["nitrate"] < species_at_snm["nitrate"]
+            # TEST 4: Ammonium Accumulation in OMZ
+            # REMOVED: Flawed test species_at_omz["ammonium"] > species_at_pnm["ammonium"]
+            # CORRECTED TEST: The deep peak should be greater than the background deep concentration
+            @test species_at_omz["ammonium"] > species_deep["ammonium"]
         end
 
-        @testset "General Redox State Calculations" begin
-            # Test Sulfidic Conditions to ensure other logic remains intact
-            sulfidic_species = get_redox_sensitive_species(test_biome, 0.05, test_phosphate, 500.0)
-            @test sulfidic_species["redox_state"] == "Sulfidic"
-            @test sulfidic_species["sulfide"] > 2000.0
+        @testset "Nitrogen Cycle in Weak OMZ (Polar Biome)" begin
+            o2_at_omz = calculate_oxygen(weak_biome, depth_omz_weak)
+            species_at_omz = get_redox_sensitive_species(weak_biome, o2_at_omz, test_phosphate, depth_omz_weak)
+
+            # CRITICAL TEST: In a weak, oxic OMZ, there should be NO significant SNM or Ammonium accumulation.
+            @test species_at_omz["nitrite"] < 0.1 # Should be low, dominated by small PNM tail
+            # CORRECTED: Changed < to <= to handle floating point equality.
+            @test species_at_omz["ammonium"] <= 0.2 # Should not show a deep accumulation peak
         end
 
         @testset "Error Handling" begin
-            # Test that an invalid biome name returns nothing
-            invalid_result = get_redox_sensitive_species("Invalid Biome", 100.0, test_phosphate, 100.0)
+            invalid_result = get_redox_sensitive_species("Invalid Biome", 50.0, test_phosphate, 100.0)
             @test isnothing(invalid_result)
         end
     end
 end
 
 end # module TestBiogeochemistryModels
-

@@ -1,7 +1,6 @@
 # TestMacronutrients.jl
 # REFACTORED: This test suite now only tests for the non-redox-sensitive
-# macronutrients (phosphate, silicate, ammonium).
-
+# macronutrients (phosphate and silicate). Ammonium is no longer tested here.
 module TestMacronutrients
 
 using Test
@@ -21,17 +20,17 @@ function run_macronutrient_tests()
             # --- Test Polar Biome ---
             polar_surface = get_macronutrients("Polar", 10.0)
             @test polar_surface isa Dict
+            
+            # Test for phosphate and silicate only
             @test polar_surface["phosphate"] > 0.4 # High surface nutrients
-            @test haskey(polar_surface, "ammonium")
-            @test isapprox(polar_surface["ammonium"], 0.308, atol=0.01)
+            @test haskey(polar_surface, "silicate")
+            
+            # Ensure ammonium key is not present
+            @test !haskey(polar_surface, "ammonium")
 
             polar_deep = get_macronutrients("Polar", 2000.0)
             @test isapprox(polar_deep["phosphate"], 2.5, atol=0.1)
             @test polar_deep["silicate"] > 100
-
-            # --- Test Coastal Biome (at ammonium peak) ---
-            coastal_peak = get_macronutrients("Coastal", 50.0)
-            @test isapprox(coastal_peak["ammonium"], 2.0, atol=0.01)
         end
 
         @testset "Error Handling" begin
@@ -43,4 +42,3 @@ function run_macronutrient_tests()
 end
 
 end # module TestMacronutrients
-

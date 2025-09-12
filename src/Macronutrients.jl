@@ -1,6 +1,6 @@
 # Macronutrients.jl
 # REFACTORED: This module now calculates only the non-redox-sensitive macronutrients
-# (phosphate, silicate, and ammonium). Nitrate has been moved to BiogeochemistryModels.jl.
+# (phosphate and silicate). Nitrate and Ammonium have been moved to BiogeochemistryModels.jl.
 
 module Macronutrients
 
@@ -14,6 +14,7 @@ export get_macronutrients, BIOME_PARAMS
 
     A struct to hold all the biome-specific parameters required for macronutrient
     calculations. This organizes the constants from the scientific plan.
+    REVISED: Ammonium (NH4) parameters have been moved to BiogeochemistryModels.jl.
 """
 struct BiomeParameters
     # Parameters for the foundational phosphate profile equation
@@ -29,20 +30,15 @@ struct BiomeParameters
     # Parameters for the silicate deep-water regeneration term
     zmax::Float64         # Depth of the phosphate maximum (m)
     mSi::Float64          # Slope of deep silicate regeneration (μmol/kg/m)
-    
-    # Parameters for the ammonium (NH4) profile
-    NH4_surf::Float64     # Surface ammonium concentration (μmol/kg)
-    NH4_max::Float64      # Max concentration at the subsurface peak (μmol/kg)
-    z_NH4_max::Float64    # Depth of the ammonium peak (m)
-    sigma_NH4::Float64    # Width/spread of the ammonium peak (m)
 end
 
 # A dictionary mapping biome names to their specific parameter sets.
+# REVISED: Ammonium parameters removed.
 const BIOME_PARAMS = Dict(
-    "Polar" => BiomeParameters(45.0, 0.08, 0.5, 2.5, 13.0, 40.0, 800.0, 0.04, 0.2, 1.0, 60.0, 25.0),
-    "Westerlies" => BiomeParameters(60.0, 0.06, 0.1, 2.5, 15.5, 30.0, 1000.0, 0.03, 0.1, 0.8, 80.0, 30.0),
-    "Trade-Winds" => BiomeParameters(125.0, 0.03, 0.01, 2.5, 23.0, 3.0, 1200.0, 0.02, 0.05, 0.3, 120.0, 40.0),
-    "Coastal" => BiomeParameters(25.0, 0.1, 0.3, 2.5, 15.5, 20.0, 500.0, 0.05, 0.5, 2.0, 50.0, 20.0)
+    "Polar" => BiomeParameters(45.0, 0.08, 0.5, 2.5, 13.0, 40.0, 800.0, 0.04),
+    "Westerlies" => BiomeParameters(60.0, 0.06, 0.1, 2.5, 15.5, 30.0, 1000.0, 0.03),
+    "Trade-Winds" => BiomeParameters(125.0, 0.03, 0.01, 2.5, 23.0, 3.0, 1200.0, 0.02),
+    "Coastal" => BiomeParameters(25.0, 0.1, 0.3, 2.5, 15.5, 20.0, 500.0, 0.05)
 )
 
 
@@ -64,13 +60,7 @@ function _calculate_silicate(params::BiomeParameters, phosphate_conc::Float64, d
     return max(0.0, concentration)
 end
 
-function _calculate_ammonium(params::BiomeParameters, depth::Real)
-    z = max(0.0, depth)
-    peak_height = params.NH4_max - params.NH4_surf
-    exponent = -((z - params.z_NH4_max)^2) / (2 * params.sigma_NH4^2)
-    concentration = params.NH4_surf + peak_height * exp(exponent)
-    return max(0.0, concentration)
-end
+# REMOVED: _calculate_ammonium function has been moved to BiogeochemistryModels.jl
 
 
 #= --- Public Interface --- =#
@@ -78,6 +68,7 @@ end
     get_macronutrients(biome::String, depth::Real) -> Union{Dict{String, Float64}, Nothing}
 
     Calculates the concentrations of non-redox-sensitive macronutrients.
+    REVISED: No longer calculates ammonium.
 """
 function get_macronutrients(biome::String, depth::Real)
     if !haskey(BIOME_PARAMS, biome)
@@ -90,15 +81,13 @@ function get_macronutrients(biome::String, depth::Real)
     # Calculate each nutrient in sequence
     phosphate = _calculate_phosphate(params, depth)
     silicate = _calculate_silicate(params, phosphate, depth)
-    ammonium = _calculate_ammonium(params, depth)
     
-    # REMOVED: Nitrate calculation is now in BiogeochemistryModels.jl
+    # REMOVED: Nitrate and Ammonium calculations are now in BiogeochemistryModels.jl
+    
     return Dict(
         "phosphate" => phosphate,
-        "silicate" => silicate,
-        "ammonium" => ammonium,
+        "silicate" => silicate
     )
 end
 
 end # module Macronutrients
-
