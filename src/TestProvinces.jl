@@ -6,13 +6,9 @@ module TestProvinces
 # Julia's standard testing library
 using Test
 
-# We need to explicitly include the source file of the module we want to test.
-# This assumes TestProvinces.jl is in the same directory as Provinces.jl.
-include("Provinces.jl")
-
 # By adding "using .Provinces", we bring the Provinces module into this
 # module's scope, allowing us to call its functions (e.g., Provinces.get_biome).
-using .Provinces
+using ..Provinces
 
 # Export the test function so it can be called from the REPL or other scripts.
 export run_provinces_tests

@@ -1,106 +1,180 @@
 # Assembler.jl
-# This module provides the main, high-level function to generate a complete
-# biogeochemical seed by assembling and standardizing the outputs of all
-# other predictive modules.
+# REFACTORED: This module has been significantly updated to incorporate the new
+# redox-aware framework and the final validation step for currency metabolites.
 
 module Assembler
 
-# Import functions from sibling modules within the package.
-using ..Provinces
-using ..Macronutrients
-using ..Micronutrients
-using ..OrganicMatter
-using Logging # Use Julia's built-in logging framework
+# Import functions from all sibling modules.
+using ..Provinces, ..Macronutrients, ..Micronutrients, ..OrganicMatter, ..SeawaterChemistry, ..PhysicalModels, ..BiogeochemistryModels
+using Logging
+using UnicodePlots # NEW: Add UnicodePlots for profiling
 
-export generate_seed
+export generate_seed, generate_profile # NEW: Export the new profiler function
 
 #= --- Master Metabolite Dictionary --- =#
-
-# This dictionary maps internal names to standardized BiGG IDs.
-# Note: Organic matter components are now handled directly by OrganicMatter.jl
-# and are returned with their correct BiGG IDs, so they are no longer in this map.
 const MASTER_METABOLITE_MAP = Dict(
-    # Macronutrients
-    "phosphate" => "pi_e",
-    "nitrate" => "no3_e",
-    "silicate" => "si_e",
-    "ammonium" => "nh4_e",
-
-    # Micronutrients (Metals)
-    "Fe" => "fe2_e",
-    "Zn" => "zn2_e",
-    "Cd" => "cd2_e",
-    "Ni" => "ni2_e",
-    "Cu" => "cu2_e",
-    "Co" => "cobalt2_e",
-    "Mn" => "mn2_e",
-
-    # Micronutrients (Vitamins)
-    "B1" => "thm_e",
-    "B12" => "cbl1_e",
+    # Macronutrients (non-redox)
+    "phosphate" => "pi_e", "silicate" => "si_e", "ammonium" => "nh4_e",
+    # Redox-sensitive species
+    "nitrate" => "no3_e", "nitrite" => "no2_e", "sulfate" => "so4_e", "sulfide" => "h2s_e",
+    "iron" => "fe2_e", "manganese" => "mn2_e",
+    # Micronutrients (non-redox)
+    "Zn" => "zn2_e", "Cd" => "cd2_e", "Ni" => "ni2_e", "Cu" => "cu2_e", "Co" => "cobalt2_e",
+    "B1" => "thm_e", "B12" => "cbl1_e",
+    # Dissolved Organic Pools
+    "DON" => "don_e", "DOP" => "dop_e",
+    # Physical/Chemical
+    "dissolved_co2" => "co2_e", "oxygen" => "o2_e"
 )
 
-
 #= --- Public Interface --- =#
-
-"""
-    generate_seed(lat::Real, lon::Real, depth::Real, shapefile_path::String) -> Union{Dict{String, Any}, Nothing}
-
-    The main user-facing function. Generates a complete, standardized environmental seed.
-"""
 function generate_seed(lat::Real, lon::Real, depth::Real, shapefile_path::String)
-    @info "--- Generating Environmental Seed ---"
+    @info "--- Generating Redox-Aware Environmental Seed ---"
     @info "Location: Lat=$lat, Lon=$lon, Depth=$depth m"
 
-    # Step 1: Determine the biogeochemical context
+    # Step 1: Context
     biome, prov_code = get_biome(lat, lon, shapefile_path)
-
-    if isnothing(biome)
-        @warn "Location is on land or outside a defined province. No seed generated."
-        return nothing
-    end
+    if isnothing(biome); @warn "Location is on land."; return nothing; end
     @info "Identified Province: $prov_code (Biome: $biome)"
 
-    # Step 2: Calculate all chemical component concentrations
+    # Step 2: Calculations
+    o2_conc = calculate_oxygen(biome, depth)
     macronutrients = get_macronutrients(biome, depth)
+    redox_species = get_redox_sensitive_species(biome, o2_conc, macronutrients["phosphate"])
     micronutrients = get_micronutrients(biome, macronutrients)
     organic_matter = get_organic_matter(biome, depth)
+    seawater_chem = get_seawater_chemistry(biome)
 
-    if any(isnothing, [macronutrients, micronutrients, organic_matter])
-        @error "A critical calculation step failed. Could not generate complete seed."
-        return nothing
+    if any(isnothing, [o2_conc, macronutrients, redox_species, micronutrients, organic_matter, seawater_chem])
+        @error "A critical calculation step failed."; return nothing;
     end
-    @info "Successfully calculated all raw chemical component concentrations."
+    @info "Redox state determined: $(redox_species["redox_state"])"
 
-    # Step 3: Assemble and standardize the final seed
-    # Merge all dictionaries. Note that organic_matter now contains BiGG IDs directly.
-    raw_seed_data = merge(macronutrients, micronutrients, organic_matter)
+    # Step 3: Assemble and Standardize
+    raw_seed_data = merge(macronutrients, micronutrients, organic_matter, seawater_chem, redox_species, Dict("oxygen"=>o2_conc))
     standardized_seed = Dict{String, Any}()
 
     for (key, concentration) in raw_seed_data
-        # If the key is in our map, translate it to the BiGG ID.
-        # Otherwise, assume the key is already a BiGG ID (from OrganicMatter.jl)
-        # or metadata (like DOC_total) and use it directly.
-        final_key = get(MASTER_METABOLITE_MAP, key, key)
-        standardized_seed[final_key] = concentration
+        if haskey(MASTER_METABOLITE_MAP, key)
+            standardized_seed[MASTER_METABOLITE_MAP[key]] = concentration
+        end
     end
 
-    # Step 4: Add required metadata to the final seed
-    # Note: Bulk DOC/POC are now moved to metadata
+    # Add protons from pH
+    ph_value = raw_seed_data["pH"]
+    standardized_seed["h_e"] = 10.0^(-ph_value)
+
+    # Step 4: Add metadata
     standardized_seed["metadata"] = Dict(
-        "latitude" => lat,
-        "longitude" => lon,
-        "depth_m" => depth,
-        "province_code" => prov_code,
-        "biome" => biome,
-        "DOC_total_umolC_kg" => pop!(standardized_seed, "DOC_total"),
-        "POC_total_umolC_kg" => pop!(standardized_seed, "POC_total"),
-        "units" => "Concentrations in umol/kg, except Fe in nmol/kg"
+        "latitude" => lat, "longitude" => lon, "depth_m" => depth,
+        "province_code" => prov_code, "biome" => biome, "pH" => ph_value,
+        "redox_state" => raw_seed_data["redox_state"],
+        "DOC_total_umolC_kg" => raw_seed_data["DOC_total"],
+        "POC_total_umolC_kg" => raw_seed_data["POC_total"],
+        "units" => "Concentrations in umol/kg (or equivalent)"
     )
     
-    @info "Seed generation complete. Output is standardized to BiGG IDs."
+    # Step 5: Final Validation - Remove Currency Metabolites
+    currency_metabolites = Set([
+        "atp_e", "adp_e", "amp_e", "nad_e", "nadh_e", "nadp_e", "nadph_e",
+        "coa_e", "ppi_e", "h_e", "h2o_e", "fad_e", "fadh2_e"
+    ])
+    
+    for met in currency_metabolites
+        delete!(standardized_seed, met)
+    end
+    @info "Final validation complete. Currency metabolites removed."
+    
+    @info "--- Seed generation complete. ---"
     return standardized_seed
 end
+
+
+#= --- NEW: Profiler Function --- =#
+
+"""
+    generate_profile(lat::Real, lon::Real, shapefile_path::String, solutes::Vector{String}; 
+                     max_depth=1000, depth_step=50)
+
+    Generates and displays a depth profile for a given list of solutes at a specific
+    geographic location using a Unicode plot in the terminal.
+
+    # Arguments
+    - `lat`, `lon`, `shapefile_path`: Location parameters, same as `generate_seed`.
+    - `solutes`: A vector of strings containing the BiGG IDs of the solutes to plot (e.g., ["o2_e", "no3_e"]).
+    - `max_depth`: The maximum depth for the profile in meters. Default is 1000.
+    - `depth_step`: The depth interval for calculations in meters. Default is 50.
+"""
+function generate_profile(lat::Real, lon::Real, shapefile_path::String, solutes::Vector{String}; 
+                          max_depth=1000, depth_step=50)
+    
+    @info "Generating Depth Profile"
+    @info "Location: Lat=$lat, Lon=$lon | Solutes: $(join(solutes, ", "))"
+
+    # Data storage
+    depths = Float64[]
+    concentrations = Dict(s => Float64[] for s in solutes)
+    
+    # Temporarily lower the logger level to avoid spamming the console from generate_seed
+    current_logger = global_logger()
+    global_logger(MinLevelLogger(current_logger, Warn))
+
+    # Generate data for the profile
+    for depth in 0:depth_step:max_depth
+        seed = generate_seed(lat, lon, depth, shapefile_path)
+        
+        if isnothing(seed)
+            @warn "Could not generate seed at depth $depth. Stopping profile."
+            break
+        end
+
+        push!(depths, -depth) # Use negative depth for conventional plotting orientation
+
+        for solute in solutes
+            conc = get(seed, solute, missing)
+            if ismissing(conc) && haskey(seed, "metadata")
+                conc = get(seed["metadata"], solute, missing)
+            end
+
+            if ismissing(conc)
+                @warn "Solute '$solute' not found in seed at depth $depth. Plotting as zero."
+                conc = 0.0
+            end
+            push!(concentrations[solute], conc)
+        end
+    end
+
+    # Restore the original logger
+    global_logger(current_logger)
+    
+    if isempty(depths)
+        @error "No data generated for profile. Please check location and parameters."
+        return
+    end
+
+    # Create the plot. UnicodePlots plots concentration (x-axis) vs. depth (y-axis).
+    plot_title = "Depth Profile at ($lat, $lon)"
+    plot = lineplot(
+        concentrations[solutes[1]], depths, 
+        title=plot_title,
+        xlabel="Concentration (units vary)", 
+        ylabel="Depth (m)",
+        name=solutes[1],
+        width=80,
+        height=25
+    )
+
+    # Add other solutes to the same plot
+    if length(solutes) > 1
+        for i in 2:length(solutes)
+            lineplot!(plot, concentrations[solutes[i]], depths, name=solutes[i])
+        end
+    end
+
+    println(plot)
+    @info "Profile generation complete."
+end
+
 
 end # module Assembler
 

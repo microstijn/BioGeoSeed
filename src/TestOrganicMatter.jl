@@ -6,8 +6,8 @@ module TestOrganicMatter
 using Test
 
 # Bring the already-loaded OrganicMatter module into this module's scope.
-include("OrganicMatter.jl")
-using .OrganicMatter
+
+using ..OrganicMatter
 
 export run_organic_matter_tests
 

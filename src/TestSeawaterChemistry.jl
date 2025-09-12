@@ -6,8 +6,8 @@ module TestSeawaterChemistry
 using Test
 
 # Bring the already-loaded SeawaterChemistry module into this module's scope.
-include("SeawaterChemistry.jl")
-using .SeawaterChemistry
+
+using ..SeawaterChemistry
 
 export run_seawater_chemistry_tests
 

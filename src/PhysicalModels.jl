@@ -40,9 +40,9 @@ const OXYGEN_PARAMS = Dict(
 
     Calculates the dissolved oxygen concentration at a given depth.
     
-    CORRECTED: This function now uses a more robust model of a Gaussian dip
-    subtracted from a linear baseline, ensuring the profile is continuous
-    and accurately represents the OMZ feature.
+    CORRECTED: This function now uses a more robust model that includes a
+    correction factor to ensure the profile exactly matches the surface
+    boundary condition while still accurately representing the OMZ feature.
 """
 function calculate_oxygen(biome::String, depth::Real)
     if !haskey(OXYGEN_PARAMS, biome)
@@ -54,13 +54,10 @@ function calculate_oxygen(biome::String, depth::Real)
     z = max(0.0, depth)
 
     # 1. Establish a simple linear baseline from the surface to the deep value.
-    # We define a transition depth to prevent the linear trend from continuing indefinitely.
     transition_depth = params.z_omz * 2.0
-    
     baseline = if z >= transition_depth
         params.O2_deep
     else
-        # Linear interpolation between surface and deep values
         params.O2_surf_sat - (params.O2_surf_sat - params.O2_deep) * (z / transition_depth)
     end
 
@@ -72,8 +69,17 @@ function calculate_oxygen(biome::String, depth::Real)
     exponent = -((z - params.z_omz)^2) / (2 * params.omz_width^2)
     dip = dip_magnitude * exp(exponent)
     
-    # 4. Subtract the dip from the baseline to get the final concentration.
-    concentration = baseline - dip
+    # 4. Calculate a correction factor to ensure the surface value is exact.
+    # The Gaussian dip has a non-zero value at the surface which must be cancelled out.
+    exponent_at_zero = -(params.z_omz^2) / (2 * params.omz_width^2)
+    dip_at_zero = dip_magnitude * exp(exponent_at_zero)
+    
+    # The correction is scaled linearly and only applies above the OMZ core.
+    correction_factor = max(0.0, (params.z_omz - z) / params.z_omz)
+    correction = dip_at_zero * correction_factor
+    
+    # 5. Apply the dip and the correction to the baseline.
+    concentration = baseline - dip + correction
     
     return max(0.0, concentration)
 end
