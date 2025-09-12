@@ -46,6 +46,7 @@ export get_redox_sensitive_species
 # Expose the main assembler function, which is the primary entry point for users
 using .Assembler
 export generate_seed
+export generate_profile
 
 # Expose all the test functions so they can be run from a script
 using .TestProvinces

@@ -7,9 +7,10 @@ module Assembler
 # Import functions from all sibling modules.
 using ..Provinces, ..Macronutrients, ..Micronutrients, ..OrganicMatter, ..SeawaterChemistry, ..PhysicalModels, ..BiogeochemistryModels
 using Logging
-using UnicodePlots # NEW: Add UnicodePlots for profiling
+using LoggingExtras  
+using UnicodePlots 
 
-export generate_seed, generate_profile # NEW: Export the new profiler function
+export generate_seed, generate_profile 
 
 #= --- Master Metabolite Dictionary --- =#
 const MASTER_METABOLITE_MAP = Dict(
@@ -29,7 +30,7 @@ const MASTER_METABOLITE_MAP = Dict(
 
 #= --- Public Interface --- =#
 function generate_seed(lat::Real, lon::Real, depth::Real, shapefile_path::String)
-    @info "--- Generating Redox-Aware Environmental Seed ---"
+    @info "Generating Redox-Aware Environmental Seed"
     @info "Location: Lat=$lat, Lon=$lon, Depth=$depth m"
 
     # Step 1: Context
@@ -85,12 +86,9 @@ function generate_seed(lat::Real, lon::Real, depth::Real, shapefile_path::String
     end
     @info "Final validation complete. Currency metabolites removed."
     
-    @info "--- Seed generation complete. ---"
+    @info "Seed generation complete."
     return standardized_seed
 end
-
-
-#= --- NEW: Profiler Function --- =#
 
 """
     generate_profile(lat::Real, lon::Real, shapefile_path::String, solutes::Vector{String}; 
@@ -117,7 +115,7 @@ function generate_profile(lat::Real, lon::Real, shapefile_path::String, solutes:
     
     # Temporarily lower the logger level to avoid spamming the console from generate_seed
     current_logger = global_logger()
-    global_logger(MinLevelLogger(current_logger, Warn))
+    global_logger(MinLevelLogger(current_logger, Logging.Warn))
 
     # Generate data for the profile
     for depth in 0:depth_step:max_depth
