@@ -7,10 +7,9 @@ module Assembler
 # Import functions from all sibling modules.
 using ..Provinces, ..Macronutrients, ..Micronutrients, ..OrganicMatter, ..SeawaterChemistry, ..PhysicalModels, ..BiogeochemistryModels
 using Logging
-using LoggingExtras  
-using UnicodePlots 
+using UnicodePlots
 
-export generate_seed, generate_profile 
+export generate_seed, generate_profile
 
 #= --- Master Metabolite Dictionary --- =#
 const MASTER_METABOLITE_MAP = Dict(
@@ -30,7 +29,7 @@ const MASTER_METABOLITE_MAP = Dict(
 
 #= --- Public Interface --- =#
 function generate_seed(lat::Real, lon::Real, depth::Real, shapefile_path::String)
-    @info "Generating Redox-Aware Environmental Seed"
+    @info "--- Generating Redox-Aware Environmental Seed ---"
     @info "Location: Lat=$lat, Lon=$lon, Depth=$depth m"
 
     # Step 1: Context
@@ -41,7 +40,8 @@ function generate_seed(lat::Real, lon::Real, depth::Real, shapefile_path::String
     # Step 2: Calculations
     o2_conc = calculate_oxygen(biome, depth)
     macronutrients = get_macronutrients(biome, depth)
-    redox_species = get_redox_sensitive_species(biome, o2_conc, macronutrients["phosphate"])
+    # CORRECTED: Pass the `depth` argument to the redox model
+    redox_species = get_redox_sensitive_species(biome, o2_conc, macronutrients["phosphate"], depth)
     micronutrients = get_micronutrients(biome, macronutrients)
     organic_matter = get_organic_matter(biome, depth)
     seawater_chem = get_seawater_chemistry(biome)
@@ -86,93 +86,43 @@ function generate_seed(lat::Real, lon::Real, depth::Real, shapefile_path::String
     end
     @info "Final validation complete. Currency metabolites removed."
     
-    @info "Seed generation complete."
+    @info "--- Seed generation complete. ---"
     return standardized_seed
 end
 
-"""
-    generate_profile(lat::Real, lon::Real, shapefile_path::String, solutes::Vector{String}; 
-                     max_depth=1000, depth_step=50)
-
-    Generates and displays a depth profile for a given list of solutes at a specific
-    geographic location using a Unicode plot in the terminal.
-
-    # Arguments
-    - `lat`, `lon`, `shapefile_path`: Location parameters, same as `generate_seed`.
-    - `solutes`: A vector of strings containing the BiGG IDs of the solutes to plot (e.g., ["o2_e", "no3_e"]).
-    - `max_depth`: The maximum depth for the profile in meters. Default is 1000.
-    - `depth_step`: The depth interval for calculations in meters. Default is 50.
-"""
 function generate_profile(lat::Real, lon::Real, shapefile_path::String, solutes::Vector{String}; 
                           max_depth=1000, depth_step=50)
     
     @info "Generating Depth Profile"
     @info "Location: Lat=$lat, Lon=$lon | Solutes: $(join(solutes, ", "))"
 
-    # Data storage
     depths = Float64[]
     concentrations = Dict(s => Float64[] for s in solutes)
     
-    # Temporarily lower the logger level to avoid spamming the console from generate_seed
     current_logger = global_logger()
-    global_logger(MinLevelLogger(current_logger, Logging.Warn))
+    global_logger(MinLevelLogger(current_logger, Warn))
 
-    # Generate data for the profile
     for depth in 0:depth_step:max_depth
         seed = generate_seed(lat, lon, depth, shapefile_path)
-        
-        if isnothing(seed)
-            @warn "Could not generate seed at depth $depth. Stopping profile."
-            break
-        end
-
-        push!(depths, -depth) # Use negative depth for conventional plotting orientation
-
+        if isnothing(seed); break; end
+        push!(depths, -depth)
         for solute in solutes
-            conc = get(seed, solute, missing)
-            if ismissing(conc) && haskey(seed, "metadata")
-                conc = get(seed["metadata"], solute, missing)
-            end
-
-            if ismissing(conc)
-                @warn "Solute '$solute' not found in seed at depth $depth. Plotting as zero."
-                conc = 0.0
-            end
+            conc = get(seed, solute, get(seed["metadata"], solute, 0.0))
             push!(concentrations[solute], conc)
         end
     end
 
-    # Restore the original logger
     global_logger(current_logger)
-    
-    if isempty(depths)
-        @error "No data generated for profile. Please check location and parameters."
-        return
+    if isempty(depths); @error "No data generated for profile."; return; end
+
+    plot = lineplot(concentrations[solutes[1]], depths, title="Depth Profile at ($lat, $lon)",
+                    xlabel="Concentration", ylabel="Depth (m)", name=solutes[1], width=80, height=25)
+    for i in 2:length(solutes)
+        lineplot!(plot, concentrations[solutes[i]], depths, name=solutes[i])
     end
-
-    # Create the plot. UnicodePlots plots concentration (x-axis) vs. depth (y-axis).
-    plot_title = "Depth Profile at ($lat, $lon)"
-    plot = lineplot(
-        concentrations[solutes[1]], depths, 
-        title=plot_title,
-        xlabel="Concentration (units vary)", 
-        ylabel="Depth (m)",
-        name=solutes[1],
-        width=80,
-        height=25
-    )
-
-    # Add other solutes to the same plot
-    if length(solutes) > 1
-        for i in 2:length(solutes)
-            lineplot!(plot, concentrations[solutes[i]], depths, name=solutes[i])
-        end
-    end
-
     println(plot)
-    @info "Profile generation complete."
+    @info "--- Profile generation complete. ---"
 end
-
 
 end # module Assembler
 
