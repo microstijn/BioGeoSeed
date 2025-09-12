@@ -16,7 +16,6 @@ export get_biome
 const PROVINCES_CACHE = Ref{Any}(nothing)
 
 # A complete and authoritative mapping from each province code to its parent biome.
-# CORRECTED: Added the 'CCAL' province code to the map.
 const BIOME_MAP = Dict(
     "APLR" => "Polar", "ARCT" => "Polar", "ARCH" => "Coastal", "BENG" => "Coastal",
     "BERS" => "Westerlies", "BKPL" => "Coastal", "BRAZ" => "Coastal", "CALC" => "Coastal",

@@ -2,7 +2,10 @@ module BioGeoSeed
 
 # Order is important for dependencies. Predictive modules are loaded first.
 include("Provinces.jl")
-include("Macronutrients.jl") # Must be included before BiogeochemistryModels
+include("Light.jl")
+include("Phytoplankton.jl")
+include("PrognosticModel.jl")
+include("Macronutrients.jl")
 include("Micronutrients.jl")
 include("OrganicMatter.jl")
 include("SeawaterChemistry.jl")
@@ -25,6 +28,15 @@ include("TestBiogeochemistryModels.jl")
 using .Provinces
 export get_biome
 
+using .Light
+export calculate_light_limitation
+
+using .Phytoplankton
+export calculate_growth_rate
+export PhytoParameters
+
+using .PrognosticModel
+
 using .Macronutrients
 export get_macronutrients
 
@@ -42,6 +54,8 @@ export calculate_oxygen
 
 using .BiogeochemistryModels
 export get_redox_sensitive_species
+
+
 
 # Expose the main assembler function, which is the primary entry point for users
 using .Assembler

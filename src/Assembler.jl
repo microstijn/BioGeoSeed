@@ -1,7 +1,6 @@
 # Assembler.jl
 # This module has been significantly updated to incorporate the new
 # redox-aware framework and the final validation step for currency metabolites.
-
 module Assembler
 
 # Import functions from all sibling modules.
@@ -9,7 +8,7 @@ using ..Provinces, ..Macronutrients, ..Micronutrients, ..OrganicMatter, ..Seawat
 using Logging
 using LoggingExtras
 using UnicodePlots
-using DelimitedFiles 
+using DelimitedFiles
 
 export generate_seed, generate_profile
 
@@ -50,7 +49,9 @@ function generate_seed(lat::Real, lon::Real, depth::Real, shapefile_path::String
     if any(isnothing, [o2_conc, macronutrients, redox_species, micronutrients, organic_matter, seawater_chem])
         @error "A critical calculation step failed."; return nothing;
     end
-    @info "Redox state determined: $(redox_species["redox_state"])"
+    
+    # REMOVED: This line caused the error because "redox_state" is no longer returned.
+    # @info "Redox state determined: $(redox_species["redox_state"])"
 
     # Step 3: Assemble and Standardize
     raw_seed_data = merge(macronutrients, micronutrients, organic_matter, seawater_chem, redox_species, Dict("oxygen"=>o2_conc))
@@ -70,7 +71,8 @@ function generate_seed(lat::Real, lon::Real, depth::Real, shapefile_path::String
     standardized_seed["metadata"] = Dict(
         "latitude" => lat, "longitude" => lon, "depth_m" => depth,
         "province_code" => prov_code, "biome" => biome, "pH" => ph_value,
-        "redox_state" => raw_seed_data["redox_state"],
+        # REMOVED: This key-value pair also caused an error.
+        # "redox_state" => raw_seed_data["redox_state"],
         "DOC_total_umolC_kg" => raw_seed_data["DOC_total"],
         "POC_total_umolC_kg" => raw_seed_data["POC_total"],
         "units" => "Concentrations in umol/kg (or equivalent)"
@@ -90,7 +92,7 @@ end
 
     Generates profile data, displays a plot, and optionally saves the data.
 """
-function generate_profile(lat::Real, lon::Real, shapefile_path::String, solutes::Vector{String}; 
+function generate_profile(lat::Real, lon::Real, shapefile_path::String, solutes::Vector{String};
                           max_depth=1000, depth_step=50, output_path::Union{String, Nothing}=nothing)
     
     @info "Generating Depth Profile Data"
@@ -141,8 +143,7 @@ function generate_profile(lat::Real, lon::Real, shapefile_path::String, solutes:
         end
     end
     
-    @info "Profile generation complete. "
+    @info "Profile generation complete."
 end
 
 end # module Assembler
-

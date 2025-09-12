@@ -1,7 +1,6 @@
 # OrganicMatter.jl
 # This module calculates the concentration and biochemical composition of dissolved
 # and particulate organic matter (DOC, POC, DON, DOP) based on the biome and depth.
-
 module OrganicMatter
 
 export get_organic_matter
@@ -57,21 +56,14 @@ function _partition_into_monomers(total_conc::Float64, composition::Dict)
 end
 
 function _partition_pool(biome::String, depth::Real, total_conc::Float64, pool_type::String)
-    composition_pool_key = pool_type == "DOC" ? "DOM" : "POM"
-    depth_zone = if depth <= 150 "Euphotic" elseif depth <= 1000 "Mesopelagic" else "Deep" end
+    # REFACTORED: Replaced if/else blocks with more concise ternary operators.
+    depth_zone = (depth <= 150) ? "Euphotic" : (depth <= 1000) ? "Mesopelagic" : "Deep"
 
-    ruleset = if depth_zone == "Euphotic"
-        biome == "Trade-Winds" ? BIOCHEMICAL_COMPOSITION[depth_zone]["Trade-Winds"] : BIOCHEMICAL_COMPOSITION[depth_zone]["Westerlies_Coastal"]
-    else
+    ruleset = (depth_zone == "Euphotic") ?
+        ((biome == "Trade-Winds") ? BIOCHEMICAL_COMPOSITION[depth_zone]["Trade-Winds"] : BIOCHEMICAL_COMPOSITION[depth_zone]["Westerlies_Coastal"]) :
         BIOCHEMICAL_COMPOSITION[depth_zone]["All"]
-    end
     
-    # CORRECTED: Access the NamedTuple using dot notation based on the string key.
-    composition_rules = if composition_pool_key == "DOM"
-        ruleset.DOM
-    else # Must be "POM"
-        ruleset.POM
-    end
+    composition_rules = (pool_type == "DOC") ? ruleset.DOM : ruleset.POM
 
     protein_conc = total_conc * (composition_rules["protein"] / 100.0)
     carb_conc = total_conc * (composition_rules["carbohydrate"] / 100.0)
@@ -85,7 +77,8 @@ function _partition_pool(biome::String, depth::Real, total_conc::Float64, pool_t
 end
 
 function _calculate_don_dop(doc_conc::Float64, depth::Real)
-    depth_zone = if depth <= 150 "Euphotic" elseif depth <= 1000 "Mesopelagic" else "Deep" end
+    # REFACTORED: Replaced if/else block with a ternary operator.
+    depth_zone = (depth <= 150) ? "Euphotic" : (depth <= 1000) ? "Mesopelagic" : "Deep"
     ratios = DOM_STOICHIOMETRY[depth_zone]
     
     don_conc = doc_conc / ratios.CN
@@ -118,4 +111,3 @@ function get_organic_matter(biome::String, depth::Real)
 end
 
 end # module OrganicMatter
-

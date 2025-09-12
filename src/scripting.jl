@@ -6,6 +6,7 @@ Pkg.activate(joinpath(@__DIR__, ".."))
 using Revise
 using BioGeoSeed
 
+
 shp_path = raw"D:\met2map\longhurst\Longhurst_world_v4_2010.shp"
 
 run_provinces_tests(
@@ -33,6 +34,9 @@ display(s)
 si = [i for i in keys(s)][1:end-1]
 
 
+get_biome(
+    0.0, -120.0, shp_path
+)
 
 generate_profile(
     0.0, -120.0,
@@ -51,6 +55,7 @@ generate_profile(
 
 
 SOLUTES_TO_PROFILE = [
+    "o2_e",
     # Carbon Cycle
     "co2_e", 
     # Nitrogen Cycle
@@ -91,9 +96,3 @@ for (biome, coords) in BIOME_LOCATIONS
         @error "   ...An error occurred while generating the profile for $biome: $e"
     end
 end
-
-
-
-
-
-
