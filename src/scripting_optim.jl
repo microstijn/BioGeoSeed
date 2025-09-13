@@ -2,7 +2,7 @@
 using Pkg
 # Ensure necessary packages are installed
 
-using DifferentialEquations
+using DifferentialEquations Optim CSV DataFrames Dates 
 using Optim
 using UnicodePlots
 using CSV
