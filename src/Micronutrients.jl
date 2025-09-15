@@ -54,11 +54,13 @@ end
 #= --- Public Interface --- =#
 function get_micronutrients(biome::String, macronutrients::Dict)
     if !haskey(TRACE_METAL_RATIOS, biome)
-        println(stderr, "Invalid biome provided for micronutrients: $biome")
+        # MODIFIED LINE
+        @warn "Invalid biome provided for micronutrients: $biome"
         return nothing
     end
     if !haskey(macronutrients, "phosphate")
-        println(stderr, "Macronutrient dictionary must contain a 'phosphate' key.")
+        # MODIFIED LINE
+        @error "Macronutrient dictionary must contain a 'phosphate' key."
         return nothing
     end
 
@@ -67,7 +69,6 @@ function get_micronutrients(biome::String, macronutrients::Dict)
     proxied_metals = _calculate_proxied_metals(biome, phosphate_conc)
     vitamins = _calculate_vitamins(biome)
 
-    # REMOVED: Iron and Manganese are no longer calculated here.
     return merge(proxied_metals, vitamins)
 end
 

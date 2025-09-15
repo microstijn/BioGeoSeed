@@ -47,7 +47,7 @@ const OXYGEN_PARAMS = Dict(
 """
 function calculate_oxygen(biome::String, depth::Real)
     if !haskey(OXYGEN_PARAMS, biome)
-        println(stderr, "Invalid biome name provided for oxygen calculation: $biome")
+        @warn "Invalid biome name provided for oxygen calculation: $biome"
         return nothing
     end
     

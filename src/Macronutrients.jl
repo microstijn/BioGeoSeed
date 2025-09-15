@@ -60,8 +60,6 @@ function _calculate_silicate(params::BiomeParameters, phosphate_conc::Float64, d
     return max(0.0, concentration)
 end
 
-# REMOVED: _calculate_ammonium function has been moved to BiogeochemistryModels.jl
-
 
 #= --- Public Interface --- =#
 """
@@ -70,19 +68,25 @@ end
     Calculates the concentrations of non-redox-sensitive macronutrients.
     REVISED: No longer calculates ammonium.
 """
-function get_macronutrients(biome::String, depth::Real)
+# In Macronutrients.jl
+
+function get_macronutrients(biome::String, depth::Real; user_phosphate::Union{Float64, Nothing}=nothing)
     if !haskey(BIOME_PARAMS, biome)
-        println(stderr, "Invalid biome provided to macronutrient model: $biome")
+        # MODIFIED LINE
+        @warn "Invalid biome provided to macronutrient model: $biome"
         return nothing
     end
     
     params = BIOME_PARAMS[biome]
     
-    # Calculate each nutrient in sequence
-    phosphate = _calculate_phosphate(params, depth)
-    silicate = _calculate_silicate(params, phosphate, depth)
+    local phosphate
+    if !isnothing(user_phosphate)
+        phosphate = user_phosphate
+    else
+        phosphate = _calculate_phosphate(params, depth)
+    end
     
-    # REMOVED: Nitrate and Ammonium calculations are now in BiogeochemistryModels.jl
+    silicate = _calculate_silicate(params, phosphate, depth)
     
     return Dict(
         "phosphate" => phosphate,

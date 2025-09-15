@@ -22,6 +22,8 @@ include("TestOrganicMatter.jl")
 include("TestSeawaterChemistry.jl")
 include("TestPhysicalModels.jl")
 include("TestBiogeochemistryModels.jl")
+include("TestAssembler.jl")
+
 # Note: A test suite for BiogeochemistryModels.jl will be the next step.
 
 # Expose the public functions from each predictive module
@@ -83,6 +85,9 @@ export run_physical_models_tests
 
 using .TestBiogeochemistryModels
 export run_biogeochemistry_models_tests
+
+using .TestAssembler
+export run_assembler_tests
 
 end # module BioGeoSeed
 

@@ -33,6 +33,21 @@ function run_macronutrient_tests()
             @test polar_deep["silicate"] > 100
         end
 
+        # --- NEW TEST SET ---
+        @testset "User Data Overrides" begin
+            user_val = 5.0 # An unusually high phosphate value
+            result = get_macronutrients("Polar", 10.0, user_phosphate=user_val)
+            
+            # Test 1: The returned phosphate should be exactly the user-provided value.
+            @test result["phosphate"] == user_val
+            
+            # Test 2: The silicate calculation should be based on the user's phosphate.
+            # We get the ratio from the BIOME_PARAMS to confirm.
+            polar_params = Macronutrients.BIOME_PARAMS["Polar"]
+            expected_silicate = polar_params.RSi_P * user_val
+            @test result["silicate"] ≈ expected_silicate atol=0.1
+        end
+
         @testset "Error Handling" begin
             # Test that an invalid biome name returns nothing
             invalid_result = get_macronutrients("Invalid Biome", 100)

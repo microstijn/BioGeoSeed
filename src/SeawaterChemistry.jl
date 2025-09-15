@@ -70,20 +70,29 @@ end
 #= --- Public Interface --- =#
 
 """
-    get_seawater_chemistry(biome::String) -> Union{Dict{String, Float64}, Nothing}
+    get_seawater_chemistry(biome::String; user_temp::Union{Float64, Nothing}=nothing) -> Union{Dict{String, Float64}, Nothing}
 
-    The primary public function. Calculates pH and dissolved CO2 for a given biome.
+    The primary public function. Calculates pH and dissolved CO2 for a given biome,
+    optionally using a user-provided temperature.
 """
-function get_seawater_chemistry(biome::String)
+function get_seawater_chemistry(biome::String; user_temp::Union{Float64, Nothing}=nothing)
     if !haskey(CHEMISTRY_PARAMS, biome)
-        println(stderr, "Invalid biome name provided for chemistry: $biome")
+        # MODIFIED LINE
+        @warn "Invalid biome name provided for chemistry: $biome"
         return nothing
     end
     
     params = CHEMISTRY_PARAMS[biome]
     
-    dissolved_co2 = _calculate_dissolved_co2(params.SST, params.PCO2_ATM)
-    ph = _calculate_ph(params.SST, params.PCO2_ATM)
+    local temp_to_use
+    if !isnothing(user_temp)
+        temp_to_use = user_temp
+    else
+        temp_to_use = params.SST
+    end
+    
+    dissolved_co2 = _calculate_dissolved_co2(temp_to_use, params.PCO2_ATM)
+    ph = _calculate_ph(temp_to_use, params.PCO2_ATM)
     
     return Dict(
         "dissolved_co2" => dissolved_co2,

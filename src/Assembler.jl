@@ -29,7 +29,46 @@ const MASTER_METABOLITE_MAP = Dict(
 )
 
 #= --- Public Interface --- =#
-function generate_seed(lat::Real, lon::Real, depth::Real, shapefile_path::String)
+
+"""
+    generate_seed(...)
+
+Generates a redox-aware marine biogeochemical seed for a given oceanic location.
+
+This function determines the appropriate biome using the Longhurst biogeochemical province map and calculates a comprehensive suite of chemical concentrations. The model causally links the dissolved oxygen profile to the speciation of key redox-sensitive compounds. Users can call this function with either positional or keyword arguments.
+
+# Arguments
+- `lat::Real`: Latitude in decimal degrees (e.g., `50.0`).
+- `lon::Real`: Longitude in decimal degrees (e.g., `-30.0`).
+- `depth::Real`: Depth in meters as a positive value (e.g., `100.0`).
+- `shapefile_path::String`: The file path to the Longhurst provinces shapefile.
+
+# Keywords
+- `user_data::Dict`: An optional dictionary to provide measured data, which will override the internal models. The key should be the compound name (e.g., `"oxygen"`).
+
+# Examples
+
+```julia
+    shp_path = "/path/to/your/Longhurst_world_v4_2010.shp"
+    
+    # --- Positional Usage ---
+    # The simplest way to call the function.
+    seed1 = generate_seed(50, -30, 100, shp_path)
+    
+    # --- Keyword Usage with User Data ---
+    # Useful for clarity and for providing measured data to constrain the model.
+    user_measurements = Dict("oxygen" => 25.0) # Measured O2 is 25.0 μmol/kg
+    
+    seed2 = generate_seed(
+        lat = 50,
+        lon = -30,
+        depth = 800,
+        shapefile_path = shp_path,
+        user_data = user_measurements
+    )
+```
+"""
+function generate_seed(; lat::Real, lon::Real, depth::Real, shapefile_path::String, user_data::Dict = Dict())
     @info "Generating Redox-Aware Environmental Seed"
     @info "Location: Lat=$lat, Lon=$lon, Depth=$depth m"
 
@@ -39,7 +78,17 @@ function generate_seed(lat::Real, lon::Real, depth::Real, shapefile_path::String
     @info "Identified Province: $prov_code (Biome: $biome)"
 
     # Step 2: Calculations
-    o2_conc = calculate_oxygen(biome, depth)
+    # Check for user-provided oxygen data.
+
+    local o2_conc
+    if haskey(user_data, "oxygen")
+        o2_conc = user_data["oxygen"]
+        @info "Using user-provided oxygen: $o2_conc μmol/kg"
+    else
+        # If no user data, run the internal model.
+        o2_conc = calculate_oxygen(biome, depth)
+    end
+
     macronutrients = get_macronutrients(biome, depth)
     redox_species = get_redox_sensitive_species(biome, o2_conc, macronutrients["phosphate"], depth)
     micronutrients = get_micronutrients(biome, macronutrients)
@@ -50,9 +99,6 @@ function generate_seed(lat::Real, lon::Real, depth::Real, shapefile_path::String
         @error "A critical calculation step failed."; return nothing;
     end
     
-    # REMOVED: This line caused the error because "redox_state" is no longer returned.
-    # @info "Redox state determined: $(redox_species["redox_state"])"
-
     # Step 3: Assemble and Standardize
     raw_seed_data = merge(macronutrients, micronutrients, organic_matter, seawater_chem, redox_species, Dict("oxygen"=>o2_conc))
     standardized_seed = Dict{String, Any}()
@@ -85,6 +131,10 @@ function generate_seed(lat::Real, lon::Real, depth::Real, shapefile_path::String
     
     @info "Seed generation complete."
     return standardized_seed
+end
+
+function generate_seed(lat::Real, lon::Real, depth::Real, shapefile_path::String; user_data::Dict = Dict())
+    return generate_seed(lat=lat, lon=lon, depth=depth, shapefile_path=shapefile_path, user_data=user_data)
 end
 
 """

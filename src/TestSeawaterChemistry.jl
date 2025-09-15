@@ -1,12 +1,8 @@
 # TestSeawaterChemistry.jl
 # This module contains a suite of tests for the SeawaterChemistry.jl module.
-
 module TestSeawaterChemistry
 
 using Test
-
-# Bring the already-loaded SeawaterChemistry module into this module's scope.
-
 using ..SeawaterChemistry
 
 export run_seawater_chemistry_tests
@@ -42,13 +38,28 @@ function run_seawater_chemistry_tests()
             @test coastal_chem isa Dict
             @test isapprox(coastal_chem["pH"], 8.09, atol=0.01)
         end
+        
+        @testset "User Data Overrides" begin
+            # Get the baseline result for the Westerlies biome (default temp is 15.0°C)
+            baseline = get_seawater_chemistry("Westerlies")
+            
+            # Override with a much colder temperature
+            cold_temp = 0.0
+            cold_result = get_seawater_chemistry("Westerlies", user_temp=cold_temp)
+            
+            # --- MODIFIED LINE ---
+            # According to the model's formula, colder water results in a HIGHER pH.
+            @test cold_result["pH"] > baseline["pH"]
+            
+            # Colder water absorbs more CO2, so this test remains correct.
+            @test cold_result["dissolved_co2"] > baseline["dissolved_co2"]
+        end
 
         @testset "Error Handling" begin
             # Test that an invalid biome name returns nothing
             invalid_result = get_seawater_chemistry("Invalid Biome")
             @test isnothing(invalid_result)
         end
-
     end
 end
 

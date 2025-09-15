@@ -92,7 +92,8 @@ end
 
 function get_organic_matter(biome::String, depth::Real)
     if !haskey(ORGANIC_PARAMS, biome)
-        println(stderr, "Invalid biome name provided for organic matter: $biome")
+        # MODIFIED LINE
+        @warn "Invalid biome name provided for organic matter: $biome"
         return nothing
     end
 
@@ -109,5 +110,4 @@ function get_organic_matter(biome::String, depth::Real)
 
     return results
 end
-
 end # module OrganicMatter

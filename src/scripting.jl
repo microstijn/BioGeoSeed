@@ -18,6 +18,7 @@ run_physical_models_tests();
 run_organic_matter_tests();
 run_seawater_chemistry_tests();
 run_biogeochemistry_models_tests();
+run_assembler_tests()
 
 
 shp_path = raw"D:\met2map\longhurst\Longhurst_world_v4_2010.shp"
@@ -29,14 +30,28 @@ s = generate_seed(
     shp_path
 )
 
-display(s)
+# Create a dictionary with your measured data
+site_measurements = Dict(
+    "oxygen" => 15.0,        # Low oxygen value from the OMZ
+    "phosphate" => 2.1,      # Measured phosphate
+    "temperature" => 0     # Measured in-situ temperature
+)
+
+# Call the function with the new keyword argument
+s = generate_seed(
+    lat = 50,
+    lon = -30,
+    depth = 400, # A depth where an OMZ is likely
+    shapefile_path = shp_path,
+    user_data = site_measurements # Pass your data here
+)
 
 si = [i for i in keys(s)][1:end-1]
-
 
 get_biome(
     0.0, -120.0, shp_path
 )
+
 
 generate_profile(
     0.0, -120.0,
