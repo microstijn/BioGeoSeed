@@ -52,7 +52,7 @@ function _calculate_phosphate(params::BiomeParameters, depth::Real)
     return max(0.0, concentration)
 end
 
-function _calculate_silicate(params::BiomeParameters, phosphate_conc::Float64, depth::Real)
+function _calculate_silicate(params::BiomeParameters, phosphate_conc::Real, depth::Real)
     z = max(0.0, depth)
     base_conc = params.RSi_P * phosphate_conc
     deep_regen = params.mSi * max(0.0, z - params.zmax)
@@ -70,7 +70,7 @@ end
 """
 # In Macronutrients.jl
 
-function get_macronutrients(biome::String, depth::Real; user_phosphate::Union{Float64, Nothing}=nothing)
+function get_macronutrients(biome::String, depth::Real; user_phosphate::Union{Real, Nothing}=nothing)
     if !haskey(BIOME_PARAMS, biome)
         # MODIFIED LINE
         @warn "Invalid biome provided to macronutrient model: $biome"

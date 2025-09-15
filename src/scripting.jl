@@ -18,7 +18,7 @@ run_physical_models_tests();
 run_organic_matter_tests();
 run_seawater_chemistry_tests();
 run_biogeochemistry_models_tests();
-run_assembler_tests()
+run_assembler_tests(shp_path);
 
 
 shp_path = raw"D:\met2map\longhurst\Longhurst_world_v4_2010.shp"
@@ -52,22 +52,33 @@ get_biome(
     0.0, -120.0, shp_path
 )
 
-
+si
 generate_profile(
     0.0, -120.0,
     shp_path,
-    reverse(si),
+    SOLUTES_TO_PROFILE[1:5],
     max_depth = 3000,
     depth_step = 1,
     #output_path = raw"D:\met2map\genseed\genseed_trade_wind.csv"
+    plot_output_path =  raw"D:\met2map\genseed\westerlies_plot.txt"
 )
+
+heatmap_solutes = SOLUTES_TO_PROFILE[1:5]
+
+generate_heatmap_profile(
+    38.0, -126.0,   # Coastal Biome location
+    shp_path,
+    heatmap_solutes,
+    max_depth=1500,
+    n_steps=100      # Number of rows in the heatmap
+);
 
 
 
 # generate_all_profiles.jl
 # This script automates the generation of full-depth profiles for each major biome
 # using the BioGeoSeed package. It saves the output of each profile to a CSV file.
-
+using StatsBase
 
 SOLUTES_TO_PROFILE = [
     "o2_e",
@@ -93,7 +104,13 @@ OUTPUT_DIR = raw"D:\met2map\genseed"
 
 # Loop through each biome, generate its profile, and save it.
 for (biome, coords) in BIOME_LOCATIONS
- 
+    
+    biome, prov = get_biome(
+        coords.lat, 
+        coords.lon,
+        shp_path
+    )
+
     output_filename = joinpath(OUTPUT_DIR, "$(biome)_profile.csv")
     
     try
@@ -102,8 +119,8 @@ for (biome, coords) in BIOME_LOCATIONS
             coords.lon, 
             shp_path, 
             SOLUTES_TO_PROFILE,
-            max_depth=10000,      # Generate profile down to 10 km
-            depth_step=10,       # Set a reasonable step for a deep profile
+            max_depth=5000,      # Generate profile down to 10 km
+            depth_step=20,       # Set a reasonable step for a deep profile
             output_path=output_filename
         )
         println("   ...Success! Profile saved to '$output_filename'")

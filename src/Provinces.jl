@@ -85,7 +85,7 @@ function get_biome(lat::Real, lon::Real, shapefile_path::String)
 
     for (prov_code, polygon) in PROVINCES_CACHE[]
         if _point_in_polygon(point, polygon)
-            # REVISED: Check if the province code exists and provide a helpful error if it doesn't.
+            # Check if the province code exists and provide a helpful error if it doesn't.
             if haskey(BIOME_MAP, prov_code)
                 biome = BIOME_MAP[prov_code]
                 return biome, prov_code

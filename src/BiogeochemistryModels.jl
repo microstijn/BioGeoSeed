@@ -63,11 +63,11 @@ The factor smoothly approaches 1.0 at low O2 and 0.0 at high O2.
 k_o2 is the half-saturation constant for oxygen inhibition. This replaces the
 discontinuous 'if/else' logic as recommended in the technical review.
 """
-function _calculate_inhibition_factor(o2_conc::Float64, k_o2::Float64)
+function _calculate_inhibition_factor(o2_conc::Real, k_o2::Real)
     return k_o2 / (k_o2 + o2_conc)
 end
 
-function _calculate_nitrogen_cycle(potential_nitrate::Float64, o2_conc::Float64, biome::String, depth::Real)
+function _calculate_nitrogen_cycle(potential_nitrate::Real, o2_conc::Real, biome::String, depth::Real)
     omz_params = PhysicalModels.OXYGEN_PARAMS[biome]
     n_params = NITROGEN_PARAMS[biome]
     z = depth
@@ -116,7 +116,7 @@ function _calculate_nitrogen_cycle(potential_nitrate::Float64, o2_conc::Float64,
 end
 
 
-function _calculate_redox_metals(o2_conc::Float64)
+function _calculate_redox_metals(o2_conc::Real)
     # REVISED: Calculate concentrations based on a smooth transition instead of a discrete state[cite: 34].
     permission_factor = _calculate_inhibition_factor(o2_conc, K_O2_METAL)
     
@@ -126,7 +126,7 @@ function _calculate_redox_metals(o2_conc::Float64)
     return fe2, mn2
 end
 
-function _calculate_sulfur_species(o2_conc::Float64)
+function _calculate_sulfur_species(o2_conc::Real)
     # REVISED: Calculate concentrations based on a smooth transition.
     permission_factor = _calculate_inhibition_factor(o2_conc, K_O2_SULFATE)
     
@@ -139,7 +139,7 @@ function _calculate_sulfur_species(o2_conc::Float64)
 end
 
 #= --- Public Interface --- =#
-function get_redox_sensitive_species(biome::String, o2_conc::Float64, phosphate::Float64, depth::Real)
+function get_redox_sensitive_species(biome::String, o2_conc::Real, phosphate::Real, depth::Real)
     if !haskey(Macronutrients.BIOME_PARAMS, biome); @error "Invalid biome: $biome"; return nothing; end 
     if !haskey(PhysicalModels.OXYGEN_PARAMS, biome); @error "Missing OMZ params for biome: $biome"; return nothing; end
 

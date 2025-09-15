@@ -63,6 +63,7 @@ export get_redox_sensitive_species
 using .Assembler
 export generate_seed
 export generate_profile
+export generate_heatmap_profile
 
 # Expose all the test functions so they can be run from a script
 using .TestProvinces
