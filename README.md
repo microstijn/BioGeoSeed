@@ -5,6 +5,8 @@ The strength of the package is its process-based model where a realistic dissolv
 
 ## Usage example
 
+### Basic usage
+
 Requires a shapefile of Longurst biochemical provinces. 
 
 ```Julia
@@ -36,6 +38,131 @@ Dict{String, Any} with 33 entries:
   ⋮           => ⋮
 ```
 
+---
+
+### User input
+
+The user can also provide measured data to influence how the concentrations of SEED components are determined. 
+
+```Julia
+# Create a dictionary with your measured data
+site_measurements = Dict(
+    "oxygen" => 15.0,        # Low oxygen value from the OMZ
+    "phosphate" => 2.1,      # Measured phosphate
+    "temperature" => 0     # Measured in-situ temperature
+)
+
+# Call the function with the new keyword argument
+s = generate_seed(
+    lat = 50,
+    lon = -30,
+    depth = 400, # A depth where an OMZ is likely
+    shapefile_path = shp_path,
+    user_data = site_measurements # Pass your data here
+)
+```
+
+Which gets you another dictionary of outputs. 
+
+```Julia
+Dict{String, Any} with 33 entries:
+  "gly_e"     => 0.0443623
+  "co2_e"     => 233.155
+  "hdcea_e"   => 0.0155268
+  "zn2_e"     => 0.01365
+  "cobalt2_e" => 0.000315
+  "glc_D_e"   => 0.0665434
+  "pi_e"      => 2.1
+  "arab_L_e"  => 0.0110906
+  "xyl_D_e"   => 0.0110906
+  ⋮           => ⋮
+```
+
+---
+
+### Profile
+
+This framework can also be used to generate a 1D profile with the option to save the profile to disk. 
+
+```Julia
+
+solutes = [
+    "o2_e",
+    # Carbon cycle
+    "co2_e", 
+    # Nitrogen cycle
+    "no3_e", "no2_e", "nh4_e"
+]
+
+generate_profile(
+    0.0, -120.0,
+    shp_path,
+    solutes,
+    max_depth = 3000,
+    depth_step = 1,
+)
+```
+
+Gives a quick colored plot of the 1D profile within the Julia terminal.
+
+```
+                        Absolute Concentrations                                    Normalized Profiles (0-1 Scale)
+         ┌──────────────────────────────────────────────────┐           ┌──────────────────────────────────────────────────┐
+        0│@.\                                 |             │o2_e      0│@@Lrrr-_________                                 /│o2_e
+         │|"-_.                              ./             │co2_e      │'\.""""T-------.==========="""\-------------.___/1│co2_e
+         │\  \=\-_.                        .,/              │no3_e      │  "\-__.        ._____========}-----@@@@Lr-r@---{=│no3_e
+         │|   "\,.\,                    .r/'                │no2_e      │._r---*""\--==="`   .___________---vrr----/""--==`│no2_e
+         │|      \,\                  ./`                   │nh4_e      │| .___r-----/"""-{="'          .,-"'            '\│nh4_e
+         │|       ||                 ./                     │           │r/"               '*.        .*'                 |│
+         │|        l                ./                      │           │|                   '-.    .r'                   |│
+         │|        /,               /                       │           │|                     '\../'                     |│
+         │|        ||.             /`                       │           │[                      .r-.                      |│
+         │|        | \.           /`                        │           │[                   ._/'  '\_.                   |│
+         │|        |  \         .r`                         │           │\                 _r/        \-_                 |│
+         │|        |  "\       ./                           │           │]              .r/`            "\..              |│
+         │|        |   "\     ,/                            │           │|           .,/'                  '\,.           /│
+         │|        |    "\   ,/                             │           │"|       ._*'                        '*_.        |│
+         │|        |     "| /`                              │           │ @     _r"                              "-_      |│
+         │|        |      \r`                               │           │ /| .,/`                                  "\,.   |│
+         │|        |      /\.                               │           │ |,,/                                        \,. |│
+         │|        |     |` \                               │           │ _/\                                           \_|│
+         │|        |     ,  ,                               │           │/| ,                                            "\│
+         │|        |     |  |                               │           │|| |                                             @│
+         │|        |     |  |                               │           │|| |                                             |│
+         │|        |     \  |                               │           │\| .                                            ./│
+         │|        |     |. ,                               │           │ |,,                                           ,/|│
+         │|        |      \|`                               │           │ /)-.                                        .r' |│
+Depth (m)│|        |      |l                                │           │ || '-_                                    _-'   |│
+         │|        |     ./"\.                              │           │ @    "\,.                              .,/`     |│
+         │|        |    ./   \.                             │           │.|       '\_.                        ._/'        |│
+         │|        |   ./     \,                            │           │|           "-_                    _-"           |│
+         │|        |   /       \_                           │           │]              \-_              _r/              |│
+         │|        |  /`        "\                          │           │|                "\,.        .,/`                |│
+         │|        | /`          "\                         │           │[                   '-_    _-'                   |│
+         │|        |,/            "\                        │           │[                     "\__/`                     |│
+         │|        |,              "\                       │           │|                      _/\_                      |│
+         │|        /                |,                      │           │|                    ,/`  "\,                    |│
+         │|       .[                 ,                      │           │|                   /'      '\                   |│
+         │|       ||                 "|                     │           │|                 ./`        "\.                 |│
+         │|       ||                  ,                     │           │|                 /            \                 |│
+         │|       ||                  |,                    │           │|                /`            "\                |│
+         │|      ,`|                   |                    │           │|               ,`              |,               |│
+         │|      | |                   |                    │           │|               /                \               |│
+         │|      | |                   |                    │           │|               |                |               |│
+         │|      | |                   |                    │           │|              |`                "|              |│
+         │|      | |                   |                    │           │|              |                  |              |│
+         │|      | |                   |                    │           │|              /                  \              |│
+         │|      | |                   |                    │           │|              |                  |              |│
+         │|      | |                   |                    │           │|              |                  |              |│
+         │|      | |                   |                    │           │|              |                  |              |│
+         │|      | |                   |                    │           │|              |                  |              |│
+         │|      | |                   |                    │           │|              |                  |              |│
+   -3 000│|      | |                   |                    │     -3 000│|              |                  |              |│
+         └──────────────────────────────────────────────────┘           └──────────────────────────────────────────────────┘
+          0            Concentration (μmol/kg)           300             0               Normalized Value                 1
+
+```
+
 
 ## Core features
 * Global Biome Identification: Automatically classifies any oceanic coordinate into one of four primary biomes (Polar, Westerlies, Trade-Winds, Coastal) using the Longhurst biogeochemical province map.
@@ -48,9 +175,8 @@ Dict{String, Any} with 33 entries:
 
 * Flexible Output: Allows users to generate data for a single point (generate_seed) or create full-depth vertical profiles that can be plotted and saved to a CSV file (generate_profile).
 
-## Planed features
-A planned future enhancement is to allow users to provide their own empirical data for key variables (e.g., a measured oxygen or nitrate profile). The package would then use this data as a boundary condition to constrain the internal models and calculate the remaining dependent chemical species. 
-
+* User Data Integration: Allows you to provide your own measured data for key variables like oxygen, phosphate, and temperature. The model then uses this data to constrain its calculations and generate a more accurate, site-specific seed.
+  
 ## Module breakdown
 The package is organized into a series of specialized modules, each responsible for a different aspect of the calculation. The Assembler.jl module orchestrates the calls to these components in the correct sequence.
 
