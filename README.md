@@ -105,7 +105,8 @@ generate_profile(
 
 Gives a quick colored plot of the 1D profile within the Julia terminal.
 
-<img width="542" height="877" alt="image" src="https://github.com/user-attachments/assets/50384cff-80d7-434e-9a09-3789ed082a95" />
+<img width="547" height="838" alt="image" src="https://github.com/user-attachments/assets/0029fe95-4c59-4e5f-85d1-a506b9567812" />
+
 
 ## Core features
 * Global Biome Identification: Automatically classifies any oceanic coordinate into one of four primary biomes (Polar, Westerlies, Trade-Winds, Coastal) using the Longhurst biogeochemical province map.
