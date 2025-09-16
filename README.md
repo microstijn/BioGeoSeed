@@ -1,7 +1,9 @@
 # BioGeoSeed.jl
 **BioGeoSeed.jl** is a Julia package designed to generate scientifically plausible, redox-aware marine biogeochemical SEEDs for metabolic modeling, particularly in environments where empirical data is sparse. By providing a latitude, longitude, and depth, users can obtain a comprehensive set of environmental parameters that simulate the distinct chemical signatures of the world's major ocean biomes.
 
-The strength of the package is its process-based model where a realistic dissolved oxygen profile (complete with a sharp oxycline and a biome-specific Oxygen Minimum Zone) acts as the master variable that causally determines the speciation of key nitrogen, sulfur, and metal compounds.
+The strength of the package is its _speed_. It was designed with a simple process-based model in mind, where a realistic dissolved oxygen profile (complete with a sharp oxycline and a biome-specific Oxygen Minimum Zone) acts as the master variable that causally determines the speciation of key nitrogen, sulfur, and metal compounds. 
+
+Users can provide a set of measured values to influence the generation of a seed. 
 
 ## Usage example
 
