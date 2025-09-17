@@ -52,15 +52,13 @@ This function determines the appropriate biome using the Longhurst biogeochemica
 ```julia
     shp_path = "/path/to/your/Longhurst_world_v4_2010.shp"
     
-    # --- Positional Usage ---
     # The simplest way to call the function.
-    seed1 = generate_seed(50, -30, 100, shp_path)
+    generate_seed(50, -30, 100, shp_path)
     
-    # --- Keyword Usage with User Data ---
-    # Useful for clarity and for providing measured data to constrain the model.
+    # Keyword Usage with user data
     user_measurements = Dict("oxygen" => 25.0) # Measured O2 is 25.0 μmol/kg
     
-    seed2 = generate_seed(
+    generate_seed(
         lat = 50,
         lon = -30,
         depth = 800,
@@ -96,7 +94,6 @@ function generate_seed(; lat::Real, lon::Real, depth::Real, shapefile_path::Stri
     end
     macronutrients = get_macronutrients(biome, depth, user_phosphate=user_phosphate)
 
-    # --- MODIFICATION START ---
     # Handle TEMPERATURE and pass all required info to the chemistry model
     user_temp = get(user_data, "temperature", nothing)
      if !isnothing(user_temp)
@@ -104,7 +101,6 @@ function generate_seed(; lat::Real, lon::Real, depth::Real, shapefile_path::Stri
     end
     # The call now includes the oxygen parameters and the calculated oxygen concentration
     seawater_chem = get_seawater_chemistry(biome, PhysicalModels.OXYGEN_PARAMS[biome], o2_conc, user_temp=user_temp)
-    # --- MODIFICATION END ---
 
     # These calls now use the potentially user-modified data
     redox_species = get_redox_sensitive_species(biome, o2_conc, macronutrients["phosphate"], depth)
@@ -169,7 +165,7 @@ function generate_profile(lat::Real, lon::Real, shapefile_path::String, solutes:
     depths = Float64[]
     concentrations = Dict(s => Float64[] for s in solutes)
     
-    # --- Suppress logger during the loop ---
+    # Suppress logger during the loop
     current_logger = global_logger()
     global_logger(MinLevelLogger(current_logger, Warn))
     try
@@ -188,7 +184,7 @@ function generate_profile(lat::Real, lon::Real, shapefile_path::String, solutes:
     
     if isempty(depths); @error "No data generated for profile."; return; end
 
-    # --- Normalize the data for the second plot ---
+    # Normalize the data for the second plot
     normalized_concentrations = Dict{String, Vector{Float64}}()
     for solute in solutes
         data_vector = concentrations[solute]
@@ -198,19 +194,18 @@ function generate_profile(lat::Real, lon::Real, shapefile_path::String, solutes:
         normalized_concentrations[solute] = vec(normalized_matrix)
     end
 
-    # --- Define a consistent color palette ---
+    # Define a consistent color palette
     plot_colors = [:cyan, :magenta, :green, :yellow, :red, :blue, :white]
 
-    # --- Create plots with consistent colors ---
     # Plot 1: Absolute Concentrations
     plot1 = lineplot(concentrations[solutes[1]], -depths, title="Absolute Concentrations",
-                     xlabel="Concentration (μmol/kg)", ylabel="Depth (m)", name=solutes[1], width=50, height=50,
-                     color=plot_colors[1], canvas=DotCanvas , blend= false, compact = true)
+                     xlabel="Concentration (μmol/kg)", ylabel="Depth (m)", name=solutes[1], width=50, height=70,
+                     color=plot_colors[1], canvas=BlockCanvas , blend= false, compact = true)
     
     # Plot 2: Normalized Profiles (0-1 Scale)
     plot2 = lineplot(normalized_concentrations[solutes[1]], -depths, title="Normalized Profiles (0-1 Scale)",
-                     xlabel="Normalized Value", name=solutes[1], width=50, height=50,
-                     color=plot_colors[1], canvas=DotCanvas , blend= false, compact = true)
+                     xlabel="Normalized Value", name=solutes[1], width=50, height=70,
+                     color=plot_colors[1], canvas=BlockCanvas , blend= false, compact = true)
 
     for i in 2:length(solutes)
         color_index = (i - 1) % length(plot_colors) + 1
