@@ -1,7 +1,7 @@
 name = "BioGeoSeed"
 uuid = "02c95e1c-fcca-4f2d-b126-0ab4b5d2ec40"
 authors = ["Stijn Peeters <58211004+microstijn@users.noreply.github.com>"]
-version = "0.1.0"
+version = "1.1.0"
 
 [deps]
 DelimitedFiles = "8bb1440f-4735-579b-a4ab-409b98df4dab"
