@@ -7,7 +7,7 @@ using ..PhysicalModels
 
 export get_seawater_chemistry
 
-#= --- Data Structures and Parameters --- =#
+# Data Structures and Parameters 
 
 const CHEMISTRY_PARAMS = Dict(
     # SST: Sea Surface Temperature (°C)
@@ -18,14 +18,14 @@ const CHEMISTRY_PARAMS = Dict(
     "Coastal" => (SST = 18.0, PCO2_ATM = 425.0)
 )
 
-#= --- Core Calculation Functions --- =#
+#= Core Calculation Functions =#
 
 """
     _calculate_dissolved_co2(temp_C::Real, pCO2_uatm::Real) -> Float64
 
     Calculates the equilibrium concentration of dissolved CO2 in seawater.
 """
-# MODIFIED: Changed Float64 to Real for flexibility
+# Changed Float64 to Real for flexibility
 function _calculate_dissolved_co2(temp_C::Real, pCO2_uatm::Real)
     temp_K = temp_C + 273.15
     Kh = 0.034 * exp(2400 * ((1 / temp_K) - (1 / 298.15)))
@@ -43,7 +43,7 @@ end
 
     Calculates seawater pH using a simplified empirical model.
 """
-# MODIFIED: Changed Float64 to Real for flexibility
+# Changed Float64 to Real for flexibility
 function _calculate_ph(temp_C::Real, pCO2_uatm::Real)
     baseline_ph = 8.25
     ph_pco2_effect = -0.001 * (pCO2_uatm - 280.0)
@@ -53,7 +53,7 @@ function _calculate_ph(temp_C::Real, pCO2_uatm::Real)
     return round(final_ph, digits=2)
 end
 
-#= --- Public Interface --- =#
+#=  Public Interface  =#
 
 """
     get_seawater_chemistry(biome::String; user_temp::Union{Real, Nothing}=nothing) -> Union{Dict{String, Float64}, Nothing}
@@ -75,13 +75,11 @@ function get_seawater_chemistry(biome::String, o2_params::PhysicalModels.OxygenP
     else
         temp_to_use = params.SST
     end
-    
-    # --- BIOLOGICAL PUMP IMPLEMENTATION START ---
-    
-    # 1. Calculate the surface-equilibrium CO2 concentration
+     
+    # Calculate the surface-equilibrium CO2 concentration
     co2_surface = _calculate_dissolved_co2(temp_to_use, params.PCO2_ATM)
     
-    # 2. Calculate Apparent Oxygen Utilization (AOU)
+    # Calculate Apparent Oxygen Utilization (AOU)
     # This is the difference between what the oxygen *should* be (surface saturation) and what it is.
     o2_saturated = o2_params.O2_surf_sat
     aou = o2_saturated - o2_conc_at_depth

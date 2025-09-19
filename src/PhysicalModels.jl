@@ -1,12 +1,12 @@
 # PhysicalModels.jl
-# This new module is responsible for calculating key physical parameters of the
+# This module is responsible for calculating key physical parameters of the
 # marine environment, starting with the dissolved oxygen profile, which is the
 # foundation of the new redox framework.
 module PhysicalModels
 
 export calculate_oxygen, OXYGEN_PARAMS 
 
-#= --- Data Structures and Parameters --- =#
+#= Data Structures and Parameters  =#
 
 """
     OxygenParameters
@@ -26,7 +26,6 @@ struct OxygenParameters
 end
 
 # A dictionary mapping biomes to their specific oxygen profile parameters.
-# REVISED: Parameters are tuned to create distinct OMZ profiles per biome.
 const OXYGEN_PARAMS = Dict(
     "Polar" => OxygenParameters(340.0, 210.0, 150.0, 0.05, 1000.0, 180.0, 500.0), # Very weak OMZ
     "Westerlies" => OxygenParameters(280.0, 150.0, 100.0, 0.04, 800.0, 40.0, 350.0), # Shallow, intense OMZ

@@ -1,5 +1,7 @@
 # TestSeawaterChemistry.jl
 # This module contains a suite of tests for the SeawaterChemistry.jl module.
+# this module needs to be updated to relfect the changes to seawatercemistry.jl
+# @microstijn
 module TestSeawaterChemistry
 
 using Test
@@ -17,7 +19,8 @@ function run_seawater_chemistry_tests()
 
         @testset "Known Biome Calculations" begin
             # Test Polar Biome (Cold, low pCO2 effect) 
-            polar_chem = get_seawater_chemistry("Polar")
+            polar_chem = get_seawater_chemistry("Polar") 
+            
             @test polar_chem isa Dict
             @test isapprox(polar_chem["pH"], 8.20, atol=0.01)
             @test isapprox(polar_chem["dissolved_co2"], 29.34, atol=0.1)

@@ -78,7 +78,7 @@ function generate_seed(; lat::Real, lon::Real, depth::Real, shapefile_path::Stri
 
     # Step 2: Calculations
 
-    # Handle OXYGEN (calculated first as it's a master variable)
+    # Handle O2 (calculated first as it's a master variable)
     local o2_conc
     if haskey(user_data, "oxygen")
         o2_conc = user_data["oxygen"]
@@ -99,6 +99,7 @@ function generate_seed(; lat::Real, lon::Real, depth::Real, shapefile_path::Stri
      if !isnothing(user_temp)
         @info "Using user-provided temperature: $(user_temp) °C"
     end
+    
     # The call now includes the oxygen parameters and the calculated oxygen concentration
     seawater_chem = get_seawater_chemistry(biome, PhysicalModels.OXYGEN_PARAMS[biome], o2_conc, user_temp=user_temp)
 

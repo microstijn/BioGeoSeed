@@ -53,6 +53,7 @@ export get_seawater_chemistry
 
 using .PhysicalModels
 export calculate_oxygen
+export OXYGEN_PARAMS
 
 using .BiogeochemistryModels
 export get_redox_sensitive_species

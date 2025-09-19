@@ -12,6 +12,7 @@ shp_path = raw"D:\met2map\longhurst\Longhurst_world_v4_2010.shp"
 run_provinces_tests(
     shp_path
 );
+
 run_macronutrient_tests();
 run_micronutrient_tests();
 run_physical_models_tests();
@@ -52,18 +53,52 @@ get_biome(
     0.0, -120.0, shp_path
 )
 
-si
+
+SOLUTES_TO_PROFILE = [
+    "o2_e",
+    # Carbon Cycle
+    "co2_e", 
+    # Nitrogen Cycle
+    "no3_e", "no2_e", "nh4_e",
+    # Phosphorus Cycle
+    "pi_e",
+    # Sulfur Cycle
+    "so4_e", "h2s_e"
+]
+
 generate_profile(
-    0.0, -120.0,
+    50, -30,
     shp_path,
-    SOLUTES_TO_PROFILE[1:5],
-    max_depth = 3000,
+    SOLUTES_TO_PROFILE,
+    max_depth = 1000,
     depth_step = 1,
     #output_path = raw"D:\met2map\genseed\genseed_trade_wind.csv"
-    plot_output_path =  raw"D:\met2map\genseed\westerlies_plot.txt"
+    #plot_output_path =  raw"D:\met2map\genseed\westerlies_plot.txt"
 )
+SOLUTES_TO_PROFILE = [
+    "o2_e",
+    # Carbon Cycle
+    "co2_e", 
+    # Nitrogen Cycle
+    "no3_e", "no2_e", "nh4_e", "don_e",
+    # Phosphorus Cycle
+    "pi_e", "dop_e",
+    # Sulfur Cycle
+    "so4_e", "h2s_e"
+]
 
-heatmap_solutes = SOLUTES_TO_PROFILE[1:5]
+SOLUTES_TO_PROFILE = [
+    "o2_e",
+    # Carbon Cycle
+    "co2_e", 
+    # Nitrogen Cycle
+    "no3_e", "no2_e", "nh4_e",
+    # Phosphorus Cycle
+    "pi_e",
+    # Sulfur Cycle
+    "so4_e", "h2s_e"
+]
+heatmap_solutes = SOLUTES_TO_PROFILE
 
 generate_heatmap_profile(
     38.0, -126.0,   # Coastal Biome location
