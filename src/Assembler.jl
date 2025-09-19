@@ -200,12 +200,12 @@ function generate_profile(lat::Real, lon::Real, shapefile_path::String, solutes:
 
     # Plot 1: Absolute Concentrations
     plot1 = lineplot(concentrations[solutes[1]], -depths, title="Absolute Concentrations",
-                     xlabel="Concentration (μmol/kg)", ylabel="Depth (m)", name=solutes[1], width=50, height=70,
+                     xlabel="Concentration (μmol/kg)", ylabel="Depth (m)", name=solutes[1], width=50, height=50,
                      color=plot_colors[1], canvas=BlockCanvas , blend= false, compact = true)
     
     # Plot 2: Normalized Profiles (0-1 Scale)
     plot2 = lineplot(normalized_concentrations[solutes[1]], -depths, title="Normalized Profiles (0-1 Scale)",
-                     xlabel="Normalized Value", name=solutes[1], width=50, height=70,
+                     xlabel="Normalized Value", name=solutes[1], width=50, height=50,
                      color=plot_colors[1], canvas=BlockCanvas , blend= false, compact = true)
 
     for i in 2:length(solutes)
